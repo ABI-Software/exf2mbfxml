@@ -8,7 +8,8 @@ def get_point(node, fields):
     field_module = coordinate_field.getFieldmodule()
     field_cache = field_module.createFieldcache()
     field_cache.setNode(node)
-    result, values = coordinate_field.evaluateReal(field_cache, 3)
+    values = [-1, -1, -1, 1]
+    result, coordinates = coordinate_field.evaluateReal(field_cache, 3)
 
     if result == RESULT_OK:
         radius_field = fields.get("radius")
@@ -18,10 +19,9 @@ def get_point(node, fields):
             if result == RESULT_OK:
                 diameter = 2 * value
 
-        values.append(diameter)
-        return values
+        values = [*coordinates, diameter]
 
-    return []
+    return values
 
 
 def get_colour(node, fields):
