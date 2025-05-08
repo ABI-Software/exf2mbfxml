@@ -1,19 +1,21 @@
 from collections import defaultdict
 
+from exf2mbfxml.zinc import get_point
+
 
 def build_node_graph(elements):
-    graph = defaultdict(lambda: {'start': [], 'end': []})
+    graph = defaultdict(lambda: {"start": [], "end": []})
 
     for element in elements:
-        node1, node2 = element.nodes
-        graph[node1.id]['start'].append(element.id)
-        graph[node2.id]['end'].append(element.id)
+        node1, node2 = element["nodes"]
+        graph[node1]["start"].append(element["id"])
+        graph[node2]["end"].append(element["id"])
 
     return graph
 
 
 def find_neighbours(element, node_graph, node_index, node_bucket):
-    node_id = element.nodes[node_index].id
+    node_id = element["nodes"][node_index]
     return node_graph[node_id][node_bucket]
 
 
@@ -21,11 +23,11 @@ def build_element_graph(elements, node_graph):
     element_graph = {}
 
     for element in elements:
-        forward_neighbours = find_neighbours(element, node_graph, 1, 'start')
-        backward_neighbours = find_neighbours(element, node_graph, 0, 'end')
-        element_graph[element.id] = {
-            'forward': forward_neighbours,
-            'backward': backward_neighbours
+        forward_neighbours = find_neighbours(element, node_graph, 1, "start")
+        backward_neighbours = find_neighbours(element, node_graph, 0, "end")
+        element_graph[element["id"]] = {
+            "forward": forward_neighbours,
+            "backward": backward_neighbours
         }
 
     return element_graph
@@ -36,7 +38,7 @@ def traverse_backwards(element_id, element_graph):
     current_element_id = element_id
 
     while True:
-        backward_neighbours = element_graph[current_element_id]['backward']
+        backward_neighbours = element_graph[current_element_id]["backward"]
         if not backward_neighbours:
             break
         current_element_id = backward_neighbours[0]  # Assuming one backward neighbour
@@ -60,7 +62,7 @@ def depth_first_traversal(element_id, element_graph, visited):
         if loop_detected:
             break
 
-        forward_neighbours = element_graph[current_element_id]['forward']
+        forward_neighbours = element_graph[current_element_id]["forward"]
         if forward_neighbours:
             forward_neighbours.sort(reverse=True)  # Sort to prioritize the highest identifier
             while len(forward_neighbours) > 1:
@@ -82,13 +84,13 @@ def determine_forest(elements):
     forest = []
     remainder = all_el_ids.difference(visited)
     while remainder:
-        # Select a random element
+        # Select a random element.
         random_element_id = remainder.pop()
 
-        # Traverse backwards
+        # Traverse backwards.
         backward_path = traverse_backwards(random_element_id, element_graph)
 
-        # Perform depth-first traversal from the starting element
+        # Perform depth-first traversal from the starting element.
         starting_element_id = backward_path[-1]
         forward_path = depth_first_traversal(starting_element_id, element_graph, visited)
         forest.append(forward_path)
@@ -101,20 +103,26 @@ def is_list_of_integers(lst):
     return all(isinstance(item, int) for item in lst)
 
 
-def convert_tree_to_points(tree, elements, element_id_map):
+def get_node(element, nodes, node_id_map, index):
+    end_node_id = element["nodes"][index]
+    return nodes[node_id_map[end_node_id]]
+
+
+def convert_tree_to_points(tree, elements, element_id_map, nodes, node_id_map, fields):
     points = [None] * len(tree)
     for index, seg in enumerate(tree):
         if isinstance(seg, list):
-            end_points = convert_tree_to_points(seg, elements)
+            end_points = convert_tree_to_points(seg, elements, element_id_map, nodes, node_id_map, fields)
         else:
-            end_points = elements[element_id_map[seg]].end_point()
+            end_node = get_node(elements[element_id_map[seg]], nodes, node_id_map, 1)
+            end_points = get_point(end_node, fields)
 
         points[index] = end_points
 
     return points
 
 
-def classify_forest(forest, elements, element_id_map):
+def classify_forest(forest, elements, element_id_map, nodes, node_id_map, fields):
     tree_is_contour = [None] * len(forest)
     leaved_trees = []
     tree_annotations = []
@@ -124,11 +132,12 @@ def classify_forest(forest, elements, element_id_map):
         if closed_contour:
             tree.pop()
 
-        points = convert_tree_to_points(tree, elements, element_id_map)
+        points = convert_tree_to_points(tree, elements, element_id_map, nodes, node_id_map, fields)
         metadata = {}
         if closed_contour:
             metadata["closed"] = True
-        start_point = elements[element_id_map[tree[0]]].start_point()
+        start_node = get_node(elements[element_id_map[tree[0]]], nodes, node_id_map, 0)
+        start_point = get_point(start_node, fields)
         leaved_trees.append([start_point, *points])
         tree_annotations.append(metadata)
         tree_is_contour[index] = is_contour

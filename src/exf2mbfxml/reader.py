@@ -83,6 +83,6 @@ def extract_mesh_info(region):
 
         forest = determine_forest(analysis_elements)
 
-        mesh_info = classify_forest(forest, analysis_elements, element_identifier_to_index_map)
+        mesh_info = classify_forest(forest, analysis_elements, element_identifier_to_index_map, nodes, node_identifier_to_index_map, node_fields)
 
     return mesh_info
