@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from exf2mbfxml.zinc import get_point
+from exf2mbfxml.zinc import get_point, get_colour
 
 
 def build_node_graph(elements):
@@ -138,6 +138,8 @@ def classify_forest(forest, elements, element_id_map, nodes, node_id_map, fields
             metadata["closed"] = True
         start_node = get_node(elements[element_id_map[tree[0]]], nodes, node_id_map, 0)
         start_point = get_point(start_node, fields)
+        colour = get_colour(start_node, fields)
+        metadata["colour"] = colour
         leaved_trees.append([start_point, *points])
         tree_annotations.append(metadata)
         tree_is_contour[index] = is_contour

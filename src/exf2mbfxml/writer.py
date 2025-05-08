@@ -16,7 +16,7 @@ def write_mbfxml(output_mbf, contents, options):
                       appname="Exf2MBFXML", appversion=package_version)
 
     # Create the contour element
-    contour = ET.SubElement(root, "contour", name="Heart (7088)", color="#FF0000", closed=str(data['metadata'][0]['closed']).lower(), shape="Contour")
+    contour = ET.SubElement(root, "contour", name="Heart (7088)", color=data['metadata'][0]['colour'], closed=str(data['metadata'][0]['closed']).lower(), shape="Contour")
 
     # Add properties
     property_guid = ET.SubElement(contour, "property", name="GUID")
