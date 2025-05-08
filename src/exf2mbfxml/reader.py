@@ -5,7 +5,6 @@ from cmlibs.zinc.context import Context
 from cmlibs.zinc.result import RESULT_OK
 
 from exf2mbfxml.analysis import determine_forest, classify_forest
-from exf2mbfxml.classes import Node, Element
 from exf2mbfxml.exceptions import EXFFile
 
 
