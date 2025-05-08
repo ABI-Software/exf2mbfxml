@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0", "setuptools_scm>=8.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools-git-versioning]
+enabled = true
+
+[project]
+name = "exf2mbfxml"
+dynamic = ["version"]
+keywords = ["Medical", "Physiology", "Mesh", "Finite Element", "Convert", "Neuroscience"]
+readme = "README.rst"
+license = {file = "LICENSE"}
+authors = [
+    { name="Hugh Sorby", email="h.sorby@auckland.ac.nz" },
+]
+dependencies = [
+    "cmlibs.utils >= 0.6",
+    "cmlibs.zinc >= 4.1"
+]
+description = "Python library for generating MBF XML formatted data from Zinc models written in the EXF format."
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+
+[project.optional-dependencies]
+test = ["coverage", "packaging"]
+
+[project.scripts]
+exf2mbfxmlconverter = "exf2mbfxml.app:main"
+
+[tool.setuptools_scm]
