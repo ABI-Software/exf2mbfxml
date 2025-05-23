@@ -2,6 +2,10 @@ import xml.etree.ElementTree as ET
 from exf2mbfxml import __version__ as package_version
 
 
+def _is_trace_association(label):
+    return label.startswith('http://') or label.startswith('https://')
+
+
 def _write_contour(contour, parent_element):
     points = contour.get("points", [])
     metadata = contour.get("metadata", [])
@@ -17,9 +21,11 @@ def _write_contour(contour, parent_element):
         attributes['closed'] = str(closed_contour).lower()
 
     if labels:
-        shortest = min(labels, key=len)
-        labels.remove(shortest)
-        attributes['name'] = shortest
+        filtered = [s for s in labels if not _is_trace_association(s)]
+        if filtered:
+            shortest = min(filtered, key=len)
+            labels.remove(shortest)
+            attributes['name'] = shortest
 
     # Create the contour element
     contour_element = ET.SubElement(parent_element, "contour", attributes)
@@ -40,7 +46,10 @@ def _write_contour(contour, parent_element):
         ET.SubElement(contour_element, "resolution").text = str(resolution)
 
     for label in labels:
-        set_property_element = ET.SubElement(contour_element, 'property', name='Set')
+        tag_name = 'Set'
+        if label.startswith('http://') or label.startswith('https://'):
+            tag_name = 'TraceAssociation'
+        set_property_element = ET.SubElement(contour_element, 'property', name=tag_name)
         ET.SubElement(set_property_element, 's').text = label
 
     # Add points

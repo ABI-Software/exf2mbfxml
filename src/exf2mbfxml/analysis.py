@@ -142,9 +142,13 @@ def classify_forest(forest, elements, element_id_map, nodes, node_id_map, fields
         is_contour = is_list_of_integers(plant)
         closed_contour = is_contour and plant[0] == plant[-1]
         if closed_contour:
-            plant.pop()
+            plant.pop(0)
 
         points, point_identifiers = convert_tree_to_points(plant, elements, element_id_map, nodes, node_id_map, fields)
+        if closed_contour:
+            # I think this will be okay for closed contours because the point_identifiers
+            # will still match when start point is added back in later.
+            points.pop()
 
         start_node, start_node_id = get_node(elements[element_id_map[plant[0]]], nodes, node_id_map, 0)
         start_point = get_point(start_node, fields)

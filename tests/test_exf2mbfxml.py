@@ -57,6 +57,14 @@ class EXFTreeTestCase(unittest.TestCase):
         write_mbfxml(output_xml_file, content)
         self.assertTrue(os.path.isfile(output_xml_file))
 
+    def test_multi_tree_with_annotations(self):
+        multi_tree_exf_file = _resource_path("multi_tree_with_annotations.exf")
+        content = read_exf(multi_tree_exf_file)
+        self.assertIsNotNone(content)
+        output_xml_file = f"{multi_tree_exf_file}.xml"
+        write_mbfxml(output_xml_file, content)
+        self.assertTrue(os.path.isfile(output_xml_file))
+
 
 if __name__ == "__main__":
     unittest.main()
