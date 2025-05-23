@@ -47,5 +47,16 @@ class EXFReadModelTestCase(unittest.TestCase):
         write_mbfxml(f"{basic_contour_exf_file}.xml", content, {})
 
 
+class EXFTreeTestCase(unittest.TestCase):
+
+    def test_basic_tree(self):
+        basic_tree_exf_file = _resource_path("basic_tree.exf")
+        content = read_exf(basic_tree_exf_file)
+        self.assertIsNotNone(content)
+        output_xml_file = f"{basic_tree_exf_file}.xml"
+        write_mbfxml(output_xml_file, content)
+        self.assertTrue(os.path.isfile(output_xml_file))
+
+
 if __name__ == "__main__":
     unittest.main()

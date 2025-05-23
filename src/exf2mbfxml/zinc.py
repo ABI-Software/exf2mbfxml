@@ -1,4 +1,5 @@
-from cmlibs.zinc.result import RESULT_OK
+from cmlibs.zinc.field import Field
+from cmlibs.zinc.result import RESULT_OK, RESULT_ERROR_GENERAL
 
 from exf2mbfxml.utilities import rgb_to_hex
 
@@ -24,16 +25,53 @@ def get_point(node, fields):
     return values
 
 
-def get_colour(node, fields):
-    rgb_field = fields.get("rgb")
-    colour = "#000000"
-    if rgb_field is not None:
-        field_module = rgb_field.getFieldmodule()
+def _evaluate_field(node, field, value_type, default_value=None):
+    value = default_value
+    if field is not None:
+        field_module = field.getFieldmodule()
         field_cache = field_module.createFieldcache()
         field_cache.setNode(node)
-        result, value = rgb_field.evaluateReal(field_cache, rgb_field.getNumberOfComponents())
-        if result == RESULT_OK:
-            colour = rgb_to_hex(value)
+        if value_type == Field.VALUE_TYPE_STRING:
+            potential_value = field.evaluateString(field_cache)
+            result = RESULT_ERROR_GENERAL if value is None else RESULT_OK
+        elif value_type == Field.VALUE_TYPE_MESH_LOCATION:
+            raise NotImplementedError('Evaluate mesh location field not implemented.')
+        elif value_type == Field.VALUE_TYPE_REAL:
+            result, potential_value = field.evaluateReal(field_cache, field.getNumberOfComponents())
+        else:
+            raise ValueError(f'No available evaluation for this type :{value_type}')
 
-    return colour
+        value = potential_value if result == RESULT_OK else value
 
+    return value
+
+
+def get_colour(node, fields):
+    result = _evaluate_field(node, fields.get('rgb'), Field.VALUE_TYPE_REAL, default_value=[0, 0, 0])
+    return rgb_to_hex(result)
+
+
+def get_resolution(node, fields):
+    return _evaluate_field(node, fields.get('resolution'), Field.VALUE_TYPE_REAL)
+
+
+def get_group_nodes(group_fields):
+    grouped_nodes = {}
+    field_module = None
+    node_set = None
+
+    for group_field in group_fields:
+        if field_module is None:
+            field_module = group_field.getFieldmodule()
+            node_set = field_module.findNodesetByFieldDomainType(Field.DOMAIN_TYPE_NODES)
+
+        node_set_group = group_field.getNodesetGroup(node_set)
+        node_iterator = node_set_group.createNodeiterator()
+        node_ids = set()
+        node = node_iterator.next()
+        while node.isValid():
+            node_ids.add(node.getIdentifier())
+            node = node_iterator.next()
+        grouped_nodes[group_field.getName()] = node_ids
+
+    return grouped_nodes

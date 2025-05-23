@@ -38,6 +38,35 @@ def _find_likely_coordinate_field(field_module):
     return likely_coordinates_field if likely_coordinates_field is not None else candidate_coordinate_field
 
 
+def _is_user_field(field):
+    """
+    Determine if a field is a user field or internal field, return True if the
+    given field is a user field and False if it isn't.
+    """
+    INTERNAL_FIELD_NAMES = ['cmiss_number', 'xi', 'coordinates']
+    return field.getName() not in INTERNAL_FIELD_NAMES
+
+
+def _find_available_fields(field_module):
+    """
+    Excludes the expected 'coordinates' field by default.
+    """
+    field_iterator = field_module.createFielditerator()
+    field = field_iterator.next()
+    available_fields = []
+    group_fields = []
+    while field.isValid():
+        group_field = field.castGroup()
+        if _is_user_field(field) and not group_field.isValid():
+            available_fields.append(field)
+        elif group_field.isValid():
+            group_fields.append(group_field)
+
+        field = field_iterator.next()
+
+    return available_fields, group_fields
+
+
 def extract_mesh_info(region):
     mesh_info = None
     field_module = region.getFieldmodule()
@@ -49,17 +78,17 @@ def extract_mesh_info(region):
     index = 0
     coordinates_field = _find_likely_coordinate_field(field_module)
     coordinates_field.setName("coordinates")
-    radius_field = field_module.findFieldByName("radius")
-    rgb_field = field_module.findFieldByName("rgb")
+    available_fields, group_fields = _find_available_fields(field_module)
+    available_fields.insert(0, coordinates_field)
+
+    # _print_check_on_field_names(available_fields)
+
     # Assumes all elements define the same element field template.
     eft = element.getElementfieldtemplate(coordinates_field, -1)
     local_nodes_count = eft.getNumberOfLocalNodes()
     if local_nodes_count == 2:
         element_identifier_to_index_map = {}
-        node_fields = {}
-        for field in [coordinates_field, radius_field, rgb_field]:
-            if field.isValid():
-                node_fields[field.getName()] = field
+        node_fields = {available_field.getName(): available_field for available_field in available_fields}
         nodes = []
         node_identifier_to_index_map = {}
         while element.isValid():
@@ -70,8 +99,7 @@ def extract_mesh_info(region):
                 if node_identifier not in node_identifier_to_index_map:
                     node_identifier_to_index_map[node_identifier] = len(nodes)
                     nodes.append(node)
-                # field_cache.setNode(node)
-                # location_result, location = coordinate_field.evaluateReal(field_cache, 3)
+
                 local_node_identifiers.append(node_identifier)
             element_identifier = element.getIdentifier()
             # Element(element_identifier, local_node_identifiers[0], local_node_identifiers[1])
@@ -82,6 +110,15 @@ def extract_mesh_info(region):
 
         forest = determine_forest(analysis_elements)
 
-        mesh_info = classify_forest(forest, analysis_elements, element_identifier_to_index_map, nodes, node_identifier_to_index_map, node_fields)
+        mesh_info = classify_forest(forest, analysis_elements, element_identifier_to_index_map, nodes, node_identifier_to_index_map, node_fields, group_fields)
 
     return mesh_info
+
+
+def _print_check_on_field_names(available_fields):
+    print('Check field name for internal fields.')
+    CHECKED_FIELD_NAMES = ['coordinates', 'radius', 'rgb']
+    for a in available_fields:
+        if a.getName() not in CHECKED_FIELD_NAMES:
+            print(a.getName())
+    print('Check complete.')

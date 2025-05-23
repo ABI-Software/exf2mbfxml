@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from exf2mbfxml.zinc import get_point, get_colour
+from exf2mbfxml.zinc import get_point, get_colour, get_resolution, get_group_nodes
 
 
 def build_node_graph(elements):
@@ -105,49 +105,65 @@ def is_list_of_integers(lst):
 
 def get_node(element, nodes, node_id_map, index):
     end_node_id = element["nodes"][index]
-    return nodes[node_id_map[end_node_id]]
+    return nodes[node_id_map[end_node_id]], end_node_id
 
 
 def convert_tree_to_points(tree, elements, element_id_map, nodes, node_id_map, fields):
     points = [None] * len(tree)
+    point_identifiers = set()
     for index, seg in enumerate(tree):
         if isinstance(seg, list):
-            end_points = convert_tree_to_points(seg, elements, element_id_map, nodes, node_id_map, fields)
+            end_points, end_point_identifiers = convert_tree_to_points(seg, elements, element_id_map, nodes, node_id_map, fields)
         else:
-            end_node = get_node(elements[element_id_map[seg]], nodes, node_id_map, 1)
+            end_node, end_point_identifiers = get_node(elements[element_id_map[seg]], nodes, node_id_map, 1)
             end_points = get_point(end_node, fields)
 
         points[index] = end_points
+        point_identifiers.add(end_point_identifiers)
 
-    return points
+    return points, point_identifiers
 
 
-def classify_forest(forest, elements, element_id_map, nodes, node_id_map, fields):
-    tree_is_contour = [None] * len(forest)
-    leaved_trees = []
-    tree_annotations = []
-    for index, tree in enumerate(forest):
-        is_contour = is_list_of_integers(tree)
-        closed_contour = is_contour and tree[0] == tree[-1]
+def _match_group(target_set, labelled_sets):
+    # Find and remove the matching labels
+    matched_labels = []
+    for label, id_set in list(labelled_sets.items()):
+        if id_set == target_set:
+            labelled_sets.pop(label)
+            matched_labels.append(label)
+
+    return matched_labels
+
+
+def classify_forest(forest, elements, element_id_map, nodes, node_id_map, fields, group_fields):
+    classification = {'contours': [], 'trees': []}
+    grouped_nodes = get_group_nodes(group_fields)
+    for index, plant in enumerate(forest):
+        is_contour = is_list_of_integers(plant)
+        closed_contour = is_contour and plant[0] == plant[-1]
         if closed_contour:
-            tree.pop()
+            plant.pop()
 
-        points = convert_tree_to_points(tree, elements, element_id_map, nodes, node_id_map, fields)
+        points, point_identifiers = convert_tree_to_points(plant, elements, element_id_map, nodes, node_id_map, fields)
+
+        start_node, start_node_id = get_node(elements[element_id_map[plant[0]]], nodes, node_id_map, 0)
+        start_point = get_point(start_node, fields)
+        point_identifiers.add(start_node_id)
+
         metadata = {}
         if closed_contour:
             metadata["closed"] = True
-        start_node = get_node(elements[element_id_map[tree[0]]], nodes, node_id_map, 0)
-        start_point = get_point(start_node, fields)
+
+        matching_labels = _match_group(point_identifiers, grouped_nodes)
+
         colour = get_colour(start_node, fields)
         metadata["colour"] = colour
-        leaved_trees.append([start_point, *points])
-        tree_annotations.append(metadata)
-        tree_is_contour[index] = is_contour
+        metadata['labels'] = matching_labels
+        resolution = get_resolution(start_node, fields)
+        if resolution is not None:
+            metadata['resolution'] = resolution
 
-    # classification = {"contours": {"points": [], "metadata": None}, "trees": {"points": [], "metadata": None}}
-    category = "contours" if all(tree_is_contour) else "trees"
-    classification = {category: {}}
-    classification[category]["points"] = leaved_trees
-    classification[category]["metadata"] = tree_annotations
+        category = 'contours' if is_contour else 'trees'
+        classification[category].append({"points": [start_point, *points], "metadata": [metadata]})
 
     return classification
