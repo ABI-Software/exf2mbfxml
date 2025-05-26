@@ -50,33 +50,59 @@ def traverse_backwards(element_id, element_graph):
     return path
 
 
-def depth_first_traversal(element_id, element_graph, visited):
-    path = []
-    stack = [(element_id, [])]
+def build_nested_list(node_map, start_node, node_to_element_map, visited):
+    def traverse(node, is_branch=False, path=None):
+        if path is None:
+            path = []
 
-    while stack:
-        current_element_id, sub_path = stack.pop()
-        loop_detected = current_element_id in path
-        path.append(current_element_id)
-        visited.add(current_element_id)
-        if loop_detected:
-            break
+        # Detect loop
+        if node in path:
+            return node
 
-        forward_neighbours = element_graph[current_element_id]["forward"]
-        if forward_neighbours:
-            forward_neighbours.sort(reverse=True)  # Sort to prioritize the highest identifier
-            while len(forward_neighbours) > 1:
-                child_element_id = forward_neighbours.pop(0)
-                path.append(depth_first_traversal(child_element_id, element_graph, visited))
+        path.append(node)
+        visited.update(node_to_element_map.get(node, set()))
 
-            stack.append((forward_neighbours[0], sub_path))
+        # If no further connections, return node or list depending on context
+        if node not in node_map:
+            return [node] if is_branch else node
 
-    return path
+        next_nodes = node_map[node]
+
+        # If only one path forward, continue linearly
+        if len(next_nodes) == 1:
+            result = traverse(next_nodes[0], path=path)
+            return [node, *result] if isinstance(result, list) else [node, result]
+
+        # If multiple paths, treat as a branch
+        branch_list = [node]
+        for next_node in sorted(next_nodes):
+            branch_list.append(traverse(next_node, is_branch=True, path=path))
+        return branch_list
+
+    return traverse(start_node)
+
+
+def _build_maps(elements):
+    node_map = {}
+    element_map = {}
+    for element in elements:
+        start, end = element['nodes']
+        for node_id in [start, end]:
+            if node_id not in element_map:
+                element_map[node_id] = set()
+            element_map[node_id].add(element['id'])
+
+        if start not in node_map:
+            node_map[start] = []
+        node_map[start].append(end)
+
+    return node_map, element_map
 
 
 def determine_forest(elements):
     node_graph = build_node_graph(elements)
     element_graph = build_element_graph(elements, node_graph)
+    node_map, node_to_element_map = _build_maps(elements)
 
     all_el_ids = set(element_graph.keys())
     visited = set()
@@ -92,7 +118,8 @@ def determine_forest(elements):
 
         # Perform depth-first traversal from the starting element.
         starting_element_id = backward_path[-1]
-        forward_path = depth_first_traversal(starting_element_id, element_graph, visited)
+        start_node = next(item['nodes'][0] for item in elements if item['id'] == starting_element_id)
+        forward_path = build_nested_list(node_map, start_node, node_to_element_map, visited)
         forest.append(forward_path)
         remainder = all_el_ids.difference(visited)
 
@@ -103,23 +130,27 @@ def is_list_of_integers(lst):
     return all(isinstance(item, int) for item in lst)
 
 
-def get_node(element, nodes, node_id_map, index):
-    end_node_id = element["nodes"][index]
-    return nodes[node_id_map[end_node_id]], end_node_id
+def has_subgroup_of(groups, outer_set):
+    return any(val < outer_set for val in groups.values())
 
 
-def convert_tree_to_points(tree, elements, element_id_map, nodes, node_id_map, fields):
-    points = [None] * len(tree)
+def get_node(nodes, node_id_map, node_id):
+    return nodes[node_id_map[node_id]]
+
+
+def convert_plant_to_points(plant, nodes, node_id_map, fields):
+    points = [None] * len(plant)
     point_identifiers = set()
-    for index, seg in enumerate(tree):
+    for index, seg in enumerate(plant):
         if isinstance(seg, list):
-            end_points, end_point_identifiers = convert_tree_to_points(seg, elements, element_id_map, nodes, node_id_map, fields)
+            end_points, end_point_identifiers = convert_plant_to_points(seg, nodes, node_id_map, fields)
+            point_identifiers.update(end_point_identifiers)
         else:
-            end_node, end_point_identifiers = get_node(elements[element_id_map[seg]], nodes, node_id_map, 1)
+            end_node = get_node(nodes, node_id_map, seg)
             end_points = get_point(end_node, fields)
+            point_identifiers.add(seg)
 
         points[index] = end_points
-        point_identifiers.add(end_point_identifiers)
 
     return points, point_identifiers
 
@@ -135,24 +166,26 @@ def _match_group(target_set, labelled_sets):
     return matched_labels
 
 
-def classify_forest(forest, elements, element_id_map, nodes, node_id_map, fields, group_fields):
+def classify_forest(forest, nodes, node_id_map, fields, group_fields):
     classification = {'contours': [], 'trees': []}
     grouped_nodes = get_group_nodes(group_fields)
     for index, plant in enumerate(forest):
-        is_contour = is_list_of_integers(plant)
+        list_of_ints = is_list_of_integers(plant)
+        is_contour = True if list_of_ints and not has_subgroup_of(grouped_nodes, set(plant)) else False
+        # print('is_contour:', is_contour)
         closed_contour = is_contour and plant[0] == plant[-1]
         if closed_contour:
             plant.pop(0)
 
-        points, point_identifiers = convert_tree_to_points(plant, elements, element_id_map, nodes, node_id_map, fields)
+        points, point_identifiers = convert_plant_to_points(plant, nodes, node_id_map, fields)
         if closed_contour:
             # I think this will be okay for closed contours because the point_identifiers
             # will still match when start point is added back in later.
+            # point_identifiers is a set and I don't know which identifier corresponds to
+            # the last point in the list of points.
             points.pop()
 
-        start_node, start_node_id = get_node(elements[element_id_map[plant[0]]], nodes, node_id_map, 0)
-        start_point = get_point(start_node, fields)
-        point_identifiers.add(start_node_id)
+        start_node = get_node(nodes, node_id_map,  plant[0])
 
         metadata = {}
         if closed_contour:
@@ -168,6 +201,6 @@ def classify_forest(forest, elements, element_id_map, nodes, node_id_map, fields
             metadata['resolution'] = resolution
 
         category = 'contours' if is_contour else 'trees'
-        classification[category].append({"points": [start_point, *points], "metadata": [metadata]})
+        classification[category].append({"points": points, "metadata": [metadata]})
 
     return classification

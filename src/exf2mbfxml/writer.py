@@ -54,7 +54,17 @@ def _write_contour(contour, parent_element):
 
     # Add points
     for point in points:
-        ET.SubElement(contour_element, "point", x=str(point[0]), y=str(point[1]), z=str(point[2]), d=str(point[3]), sid="S1072")
+        ET.SubElement(contour_element, "point", x=str(point[0]), y=str(point[1]), z=str(point[2]), d=str(point[3]))
+
+
+def _write_tree(tree, parent_element):
+    points = tree.get("points", [])
+    metadata = tree.get("metadata", [])
+    if not points:
+        return
+
+    print(points)
+    print(metadata)
 
 
 def write_mbfxml(output_mbf, data, options=None):
@@ -64,6 +74,9 @@ def write_mbfxml(output_mbf, data, options=None):
 
     for contour in data.get('contours', []):
         _write_contour(contour, root)
+
+    for tree in data.get('trees', []):
+        _write_tree(tree, root)
 
     # Create the XML tree and write to a file
     tree = ET.ElementTree(root)

@@ -70,7 +70,6 @@ def _find_available_fields(field_module):
 def extract_mesh_info(region):
     mesh_info = None
     field_module = region.getFieldmodule()
-    # field_cache = field_module.createFieldcache()
     mesh_1d = field_module.findMeshByDimension(1)
     analysis_elements = [None] * mesh_1d.getSize()
     element_iterator = mesh_1d.createElementiterator()
@@ -109,8 +108,7 @@ def extract_mesh_info(region):
             index += 1
 
         forest = determine_forest(analysis_elements)
-
-        mesh_info = classify_forest(forest, analysis_elements, element_identifier_to_index_map, nodes, node_identifier_to_index_map, node_fields, group_fields)
+        mesh_info = classify_forest(forest, nodes, node_identifier_to_index_map, node_fields, group_fields)
 
     return mesh_info
 
