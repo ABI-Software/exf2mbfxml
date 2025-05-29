@@ -1,7 +1,7 @@
 
 import unittest
 
-from exf2mbfxml.utilities import nest_multiple_sequences, find_matching_subsequence
+from exf2mbfxml.utilities import nest_multiple_sequences, find_matching_subsequence, duplicate_structure
 
 
 class TestNestingFunctions(unittest.TestCase):
@@ -116,6 +116,23 @@ class TestFindSubsequenceFunctions(unittest.TestCase):
         data = [1, 2, 3, 4, [5, [6, 7]]]
         sequence = {}
         self.assertIsNone(find_matching_subsequence(data, sequence))
+
+
+class TestDuplicateStructureFunctions(unittest.TestCase):
+    def test_invalid_input(self):
+        data = 1
+        expected = None
+        self.assertEqual(expected, duplicate_structure(data))
+
+    def test_simple(self):
+        data = [1, 2, 3, 4, [5, 6, 7]]
+        expected = [None, [None]]
+        self.assertEqual(expected, duplicate_structure(data))
+
+    def test_multi_layered(self):
+        data = [1, 2, [3, 4, [5, [6, 7]]]]
+        expected = [None, [None, [None, [None]]]]
+        self.assertEqual(expected, duplicate_structure(data))
 
 
 if __name__ == '__main__':

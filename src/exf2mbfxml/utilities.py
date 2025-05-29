@@ -100,3 +100,17 @@ def collect_integers_until_non_integer(input_list):
         else:
             break
     return result
+
+
+def duplicate_structure(nested_list):
+    if not isinstance(nested_list, list):
+        return None
+
+    new_structure = [None]
+    i = 0
+    while i < len(nested_list):
+        if isinstance(nested_list[i], list):
+            new_structure.append(duplicate_structure(nested_list[i]))
+        i += 1
+
+    return new_structure
