@@ -4,10 +4,8 @@ from cmlibs.utils.zinc.field import field_is_managed_coordinates
 from cmlibs.zinc.context import Context
 from cmlibs.zinc.result import RESULT_OK
 
-from exf2mbfxml.analysis import determine_forest, classify_forest, adjust_groups_to_structure, adjust_structure_and_groups, build_subtrees, build_subtree_map, trim_groups, \
-    find_maximal_non_branching_paths
+from exf2mbfxml.analysis import determine_forest, classify_forest, find_maximal_non_branching_paths
 from exf2mbfxml.exceptions import EXFFile
-from exf2mbfxml.zinc import get_group_nodes
 
 
 def read_exf(file_name):

@@ -306,30 +306,6 @@ def _match_group(target_set, labelled_sets):
     return matched_labels
 
 
-def adjust_structure_and_groups(nested_list, groups):
-    new_structure = []
-    new_groups = {key: set() for key in groups.keys()}
-
-    def recursive_process(sublist):
-        current_sublist = []
-        for item in sublist:
-            if isinstance(item, int):
-                current_sublist.append(item)
-                # Check which groups this item belongs to
-                for key, indices in groups.items():
-                    if item in indices:
-                        new_groups[key].add(item)
-            elif isinstance(item, list):
-                # Recursively process the sublist
-                processed_sublist = recursive_process(item)
-                if processed_sublist:
-                    current_sublist.append(processed_sublist)
-        return current_sublist
-
-    new_structure = recursive_process(nested_list)
-    return new_structure, new_groups
-
-
 def build_subtrees(branch, parent=None, node_to_subtree=None):
     if node_to_subtree is None:
         node_to_subtree = {}
@@ -349,97 +325,21 @@ def build_subtrees(branch, parent=None, node_to_subtree=None):
 
     return node_to_subtree
 
-# Original nested list and groups
-# nested_list = [[1, 2, 3, 4, 5, 6, 7, 8, [9, [10], [11, 12]], [13, 14, 15, 16, 17, 18]]]
-# groups = {
-#     'Bob': {8, 13, 14},
-#     'Dave': {8, 9, 10, 11},
-#     'Dendrite': {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},
-#     'FIL: Filaments 1': {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},
-#     'http://uri.interlex.org/base/ilx_0777077': {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},
-#     'http://uri.interlex.org/base/ilx_0777078': {2, 3, 4},
-#     'http://uri.interlex.org/base/ilx_0777079': {3, 4, 5},
-#     'http://uri.interlex.org/base/ilx_0777080': {4, 5, 6, 7, 8, 9, 13},
-#     'http://uri.interlex.org/base/ilx_0777081': {8, 9, 10, 11},
-#     'http://uri.interlex.org/base/ilx_0777082': {9, 10},
-#     'http://uri.interlex.org/base/ilx_0777083': {9, 11, 12},
-#     'http://uri.interlex.org/base/ilx_0777084': {8, 13, 14},
-#     'http://uri.interlex.org/base/ilx_0777085': {13, 14, 15, 16, 17},
-#     'http://uri.interlex.org/base/ilx_0777086': {16, 17, 18},
-#     'http://uri.interlex.org/base/ilx_0777087': {17, 18},
-#     'inner submucosal nerve plexus': {1, 2, 3, 4, 5, 6, 7, 8
-
-
-def adjust_groups_to_structure(nested_list, groups):
-    """
-    Adjust group memberships to match the actual nested tree structure.
-
-    Parameters:
-    - nested_list: A nested list of integers representing the tree structure.
-    - groups: A dictionary mapping group names to sets of point indices.
-
-    Returns:
-    - A dictionary with adjusted group memberships.
-    """
-
-    def flatten(nested):
-        """Recursively flatten a nested list."""
-        flat = []
-        for item in nested:
-            if isinstance(item, list):
-                flat.extend(flatten(item))
-            else:
-                flat.append(item)
-        return flat
-
-    valid_points = set(flatten(nested_list))
-    adjusted = {group: points & valid_points for group, points in groups.items()}
-    return adjusted
-
-
-def restructure_list(nested_list, target_set):
-    def helper(sublist, target_set_local ):
-        if isinstance(sublist, list):
-            new_sublist = []
-            temp_list = []
-            for item in sublist:
-                if isinstance(item, list):
-                    new_sublist.append(helper(item, target_set_local))
-                elif item in target_set_local:
-                    temp_list.append(item)
-                else:
-                    new_sublist.append(item)
-            if temp_list:
-                new_sublist.append(temp_list)
-            return new_sublist
-        else:
-            return sublist
-    return helper(nested_list, target_set)
-
 
 def classify_forest(forest, plant_path_info, nodes, node_id_map, fields, group_fields):
     classification = {'contours': [], 'trees': []}
     grouped_nodes = get_group_nodes(group_fields)
     nodes_by_group = {tuple(v): k for k, v in grouped_nodes.items()}
     group_implied_structure = [set(v) for v in nodes_by_group.keys()]
-    print('nodes by group')
-    print(nodes_by_group)
-    print('group implied structure')
-    print(group_implied_structure)
 
     for index, plant in enumerate(forest):
-        print('plant')
-        print(plant)
         list_of_ints = is_list_of_integers(plant)
         is_contour = True if list_of_ints and not has_subgroup_of(grouped_nodes, set(plant)) else False
 
         if not is_contour:
             for sequence in group_implied_structure:
                 plant = nest_sequence(plant, sequence)
-                print(sequence)
-                print(plant)
-        # print('is_contour:', is_contour)
-        print(plant)
+
         closed_contour = is_contour and plant[0] == plant[-1]
         if closed_contour:
             plant.pop(0)
@@ -459,8 +359,6 @@ def classify_forest(forest, plant_path_info, nodes, node_id_map, fields, group_f
             metadata["closed"] = True
 
         matching_labels = _match_group(point_identifiers, grouped_nodes)
-        print('grouped_nodes')
-        print(grouped_nodes)
         for gg in grouped_nodes.values():
             print(gg, gg < set(point_identifiers))
 
