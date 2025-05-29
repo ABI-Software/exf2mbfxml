@@ -11,6 +11,12 @@ class TestNestingFunctions(unittest.TestCase):
         expected = [1, 2, [3, 4, [5, [6, 7]]]]
         self.assertEqual(expected, nest_multiple_sequences(data, sequences))
 
+    def test_single_value_already_nested(self):
+        data = [1, 2, 3, 4, 5, 6, 7, 8, [9, [10], [11, 12]], [13, [14, 15, 16, 17, 18]]]
+        sequences = [{9}]
+        expected = [1, 2, 3, 4, 5, 6, 7, 8, [9, [10], [11, 12]], [13, [14, 15, 16, 17, 18]]]
+        self.assertEqual(expected, nest_multiple_sequences(data, sequences))
+
     def test_simple_middle_input_needing_nesting(self):
         data = [1, 2, 3, 4, 5, 6, 7]
         sequences = [[4, 5]]
@@ -57,6 +63,12 @@ class TestNestingFunctions(unittest.TestCase):
         data = [1, 2, 3, 4, 5, 6, 7, 8, [9, [10], [11, 12]], [13, 14, 15, 16, 17, 18]]
         sequences = [{15, 16, 17}]
         expected = [1, 2, 3, 4, 5, 6, 7, 8, [9, [10], [11, 12]], [13, 14, [15, 16, 17, [18]]]]
+        self.assertEqual(expected, nest_multiple_sequences(data, sequences))
+
+    def test_large_sequence(self):
+        data = [1, 2, 3, 4, 5, 6, 7, 8, [9, [[10], [11, 12]]], [13, [14, 15, 16, 17, 18]]]
+        sequences = [{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18}]
+        expected = [1, 2, 3, 4, 5, 6, 7, 8, [9, [[10], [11, 12]]], [13, [14, 15, 16, 17, 18]]]
         self.assertEqual(expected, nest_multiple_sequences(data, sequences))
 
     def test_missing_sequence(self):

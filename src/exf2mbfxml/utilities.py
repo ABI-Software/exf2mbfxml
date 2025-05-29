@@ -27,6 +27,10 @@ def nest_sequence(data, sequence):
     if isinstance(sequence, list):
         sequence = set(sequence)
 
+    matchable_data = collect_integers_until_non_integer(data)
+    if set(matchable_data) == sequence:
+        return data
+
     result = []
     i = 0
     while i < data_length:
@@ -82,3 +86,13 @@ def find_matching_subsequence(input_list, sequence_set):
             return i
 
     return None
+
+
+def collect_integers_until_non_integer(input_list):
+    result = []
+    for item in input_list:
+        if isinstance(item, int):
+            result.append(item)
+        else:
+            break
+    return result
