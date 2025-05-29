@@ -104,13 +104,24 @@ def collect_integers_until_non_integer(input_list):
 
 def duplicate_structure(nested_list):
     if not isinstance(nested_list, list):
-        return None
+        return None, None
 
-    new_structure = [None]
-    i = 0
-    while i < len(nested_list):
-        if isinstance(nested_list[i], list):
-            new_structure.append(duplicate_structure(nested_list[i]))
-        i += 1
+    trace = {}
 
-    return new_structure
+    def _helper(nested_list_local, path=None):
+        if path is None:
+            path = []
+        new_structure = [None]
+        i = 0
+        while i < len(nested_list_local):
+            current_path = path + [i]
+            if isinstance(nested_list_local[i], list):
+                child_structure = _helper(nested_list_local[i], current_path)
+                new_structure.append(child_structure)
+            elif i == 0:
+                trace[tuple(current_path)] = 1
+            i += 1
+
+        return new_structure
+
+    return _helper(nested_list), list(trace.keys())

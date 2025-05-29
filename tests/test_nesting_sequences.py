@@ -121,18 +121,24 @@ class TestFindSubsequenceFunctions(unittest.TestCase):
 class TestDuplicateStructureFunctions(unittest.TestCase):
     def test_invalid_input(self):
         data = 1
-        expected = None
+        expected = (None, None)
         self.assertEqual(expected, duplicate_structure(data))
 
     def test_simple(self):
         data = [1, 2, 3, 4, [5, 6, 7]]
         expected = [None, [None]]
-        self.assertEqual(expected, duplicate_structure(data))
+        structure, paths = duplicate_structure(data)
+        self.assertEqual(expected, structure)
+        expected = [(0,), (4, 0)]
+        self.assertEqual(expected, paths)
 
     def test_multi_layered(self):
         data = [1, 2, [3, 4, [5, [6, 7]]]]
         expected = [None, [None, [None, [None]]]]
-        self.assertEqual(expected, duplicate_structure(data))
+        structure, paths = duplicate_structure(data)
+        self.assertEqual(expected, structure)
+        expected = [(0,), (2, 0), (2, 2, 0), (2, 2, 1, 0)]
+        self.assertEqual(expected, paths)
 
 
 if __name__ == '__main__':

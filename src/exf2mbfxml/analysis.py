@@ -1,5 +1,5 @@
 # from collections import defaultdict
-from exf2mbfxml.utilities import nest_sequence
+from exf2mbfxml.utilities import nest_sequence, duplicate_structure
 from exf2mbfxml.zinc import get_point, get_colour, get_resolution, get_group_nodes
 
 from typing import Union, List, Dict, Set
@@ -296,7 +296,9 @@ def convert_plant_to_points(plant, nodes, node_id_map, fields):
 
 
 def _match_group(target_set, labelled_sets):
-    # Find and remove the matching labels
+    """
+    Find and remove the matching labels.
+    """
     matched_labels = []
     for label, id_set in list(labelled_sets.items()):
         if id_set == target_set:
@@ -358,9 +360,11 @@ def classify_forest(forest, plant_path_info, nodes, node_id_map, fields, group_f
         if closed_contour:
             metadata["closed"] = True
 
+        print(point_identifiers)
+        print(duplicate_structure(plant))
         matching_labels = _match_group(point_identifiers, grouped_nodes)
-        for gg in grouped_nodes.values():
-            print(gg, gg < set(point_identifiers))
+        # for gg in grouped_nodes.values():
+        #     print(gg, gg < set(point_identifiers))
 
         colour = get_colour(start_node, fields)
         metadata["colour"] = colour
