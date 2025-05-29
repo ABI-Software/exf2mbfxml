@@ -1,5 +1,5 @@
 # from collections import defaultdict
-
+from exf2mbfxml.utilities import nest_sequence
 from exf2mbfxml.zinc import get_point, get_colour, get_resolution, get_group_nodes
 
 from typing import Union, List, Dict, Set
@@ -420,11 +420,26 @@ def restructure_list(nested_list, target_set):
 def classify_forest(forest, plant_path_info, nodes, node_id_map, fields, group_fields):
     classification = {'contours': [], 'trees': []}
     grouped_nodes = get_group_nodes(group_fields)
+    nodes_by_group = {tuple(v): k for k, v in grouped_nodes.items()}
+    group_implied_structure = [set(v) for v in nodes_by_group.keys()]
+    print('nodes by group')
+    print(nodes_by_group)
+    print('group implied structure')
+    print(group_implied_structure)
+
     for index, plant in enumerate(forest):
+        print('plant')
         print(plant)
         list_of_ints = is_list_of_integers(plant)
         is_contour = True if list_of_ints and not has_subgroup_of(grouped_nodes, set(plant)) else False
+
+        if not is_contour:
+            for sequence in group_implied_structure:
+                plant = nest_sequence(plant, sequence)
+                print(sequence)
+                print(plant)
         # print('is_contour:', is_contour)
+        print(plant)
         closed_contour = is_contour and plant[0] == plant[-1]
         if closed_contour:
             plant.pop(0)

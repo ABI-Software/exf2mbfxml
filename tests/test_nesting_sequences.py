@@ -11,6 +11,18 @@ class TestNestingFunctions(unittest.TestCase):
         expected = [1, 2, [3, 4, [5, [6, 7]]]]
         self.assertEqual(expected, nest_multiple_sequences(data, sequences))
 
+    def test_simple_middle_input_needing_nesting(self):
+        data = [1, 2, 3, 4, 5, 6, 7]
+        sequences = [[4, 5]]
+        expected = [1, 2, 3, [4, 5, [6, 7]]]
+        self.assertEqual(expected, nest_multiple_sequences(data, sequences))
+
+    def test_simple_end_input_needing_nesting(self):
+        data = [1, 2, 3, 4, 5, 6, 7]
+        sequences = [[6, 7]]
+        expected = [1, 2, 3, 4, 5, [6, 7]]
+        self.assertEqual(expected, nest_multiple_sequences(data, sequences))
+
     def test_flat_input_needing_nesting(self):
         data = [1, 2, 3, 4, 5, [6, 7]]
         sequences = [[3, 4], [5]]
@@ -21,6 +33,30 @@ class TestNestingFunctions(unittest.TestCase):
         data = [1, 2, [3, 4, 5, [6, 7]]]
         sequences = [[4, 5]]
         expected = [1, 2, [3, [4, 5, [6, 7]]]]
+        self.assertEqual(expected, nest_multiple_sequences(data, sequences))
+
+    def test_multi_level_input_I(self):
+        data = [1, 2, 3, 4, 5, 6, 7, 8, [9, [10], [11, 12]], [13, 14, 15, 16, 17, 18]]
+        sequences = [{13}]
+        expected = [1, 2, 3, 4, 5, 6, 7, 8, [9, [10], [11, 12]], [13, [14, 15, 16, 17, 18]]]
+        self.assertEqual(expected, nest_multiple_sequences(data, sequences))
+
+    def test_multi_level_input_II(self):
+        data = [1, 2, 3, 4, 5, 6, 7, 8, [9, [10], [11, 12]], [13, 14, 15, 16, 17, 18]]
+        sequences = [{13, 14}]
+        expected = [1, 2, 3, 4, 5, 6, 7, 8, [9, [10], [11, 12]], [13, 14, [15, 16, 17, 18]]]
+        self.assertEqual(expected, nest_multiple_sequences(data, sequences))
+
+    def test_multi_level_input_III(self):
+        data = [1, 2, 3, 4, 5, 6, 7, 8, [9, [10], [11, 12]], [13, 14, 15, 16, 17, 18]]
+        sequences = [{15, 16}]
+        expected = [1, 2, 3, 4, 5, 6, 7, 8, [9, [10], [11, 12]], [13, 14, [15, 16, [17, 18]]]]
+        self.assertEqual(expected, nest_multiple_sequences(data, sequences))
+
+    def test_multi_level_input_IV(self):
+        data = [1, 2, 3, 4, 5, 6, 7, 8, [9, [10], [11, 12]], [13, 14, 15, 16, 17, 18]]
+        sequences = [{15, 16, 17}]
+        expected = [1, 2, 3, 4, 5, 6, 7, 8, [9, [10], [11, 12]], [13, 14, [15, 16, 17, [18]]]]
         self.assertEqual(expected, nest_multiple_sequences(data, sequences))
 
     def test_missing_sequence(self):

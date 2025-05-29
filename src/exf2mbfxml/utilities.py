@@ -23,24 +23,36 @@ def is_sequence_nested(data, sequence):
 
 def nest_sequence(data, sequence):
     sequence_length = len(sequence)
+    data_length = len(data)
     if isinstance(sequence, list):
         sequence = set(sequence)
+
     result = []
-    for i in range(len(data)):
+    i = 0
+    while i < data_length:
+        i_end = i + sequence_length
+        window = data[i:i_end]
+
         if isinstance(data[i], list):
             result.append(nest_sequence(data[i], sequence))
-        elif is_matching_subsequence(data[i:i + sequence_length], sequence):
-            nested = data[i:i + len(sequence)]
-            i += len(sequence)
-            rest = data[i:]
-            if len(rest) == 1 and isinstance(rest, list):
-                rest = rest[0]
-            result.append([*nested, rest])
-            return result
+        elif is_matching_subsequence(window, sequence):
+            rest = data[i_end:]
+            if i == 0:
+                result.extend(window)
+                result.append(rest)
+            elif not rest:
+                result.append(window)
+            elif len(rest) == 1 and isinstance(rest[0], list):
+                result.append([*window, *rest])
+            else:
+                result.append([*window, rest])
+            break
         else:
             result.append(data[i])
 
-    return result  # sequence not found
+        i += 1
+
+    return result
 
 
 def nest_multiple_sequences(data, sequences):
