@@ -18,6 +18,7 @@ def is_sequence_nested(data, sequence):
         return False
     if data[:len(sequence)] == sequence:
         return True
+
     return any(is_sequence_nested(item, sequence) for item in data if isinstance(item, list))
 
 

@@ -89,6 +89,12 @@ class TestNestingFunctions(unittest.TestCase):
         expected = [1, 2, 3, 4, 5, [6, 7]]
         self.assertEqual(expected, nest_multiple_sequences(data, sequences))
 
+    def test_invalid_input_list(self):
+        data = None
+        sequences = [{4, 5, 6}]
+        expected = []
+        self.assertEqual(expected, nest_multiple_sequences(data, sequences))
+
 
 class TestFindSubsequenceFunctions(unittest.TestCase):
     def test_exists(self):
