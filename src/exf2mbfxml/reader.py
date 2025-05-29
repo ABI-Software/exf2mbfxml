@@ -109,8 +109,6 @@ def extract_mesh_info(region):
             element = element_iterator.next()
             index += 1
 
-        print('analysis of elements:')
-        print(analysis_elements)
         forest, forest_members = determine_forest(analysis_elements)
 
         plant_path_info = []
@@ -123,7 +121,7 @@ def extract_mesh_info(region):
     return mesh_info
 
 
-def _print_check_on_field_names(available_fields):
+def _print_check_on_field_names(available_fields):  # pragma: no cover
     print('Check field name for internal fields.')
     CHECKED_FIELD_NAMES = ['coordinates', 'radius', 'rgb']
     for a in available_fields:

@@ -23,6 +23,9 @@ def is_sequence_nested(data, sequence):
 
 
 def nest_sequence(data, sequence):
+    if not isinstance(data, list):
+        return []
+
     sequence_length = len(sequence)
     data_length = len(data)
     if isinstance(sequence, list):
