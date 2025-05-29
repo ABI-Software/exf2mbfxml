@@ -1,21 +1,103 @@
-from collections import defaultdict
+# from collections import defaultdict
 
 from exf2mbfxml.zinc import get_point, get_colour, get_resolution, get_group_nodes
+
+from typing import Union, List, Dict, Set
+from collections import defaultdict
+# from pprint import pprint
+
+Branch = Union[int, List["Branch"]]
+
+
+def build_subtree_map(tree: Branch, node_to_subtree: Dict[int, Set[int]] = None) -> Dict[int, Set[int]]:
+    if node_to_subtree is None:
+        node_to_subtree = defaultdict(set)
+
+    def helper(node: Branch, parent=None) -> Set[int]:
+        if isinstance(node, int):
+            node_to_subtree[node].add(node)
+            return {node}
+        else:
+            all_nodes = set()
+            for child in node:
+                child_nodes = helper(child)
+                all_nodes.update(child_nodes)
+            if isinstance(node[0], int):  # mark the first node as the parent
+                node_to_subtree[node[0]].update(all_nodes)
+            return all_nodes
+
+    helper(tree)
+    return node_to_subtree
+
+
+def trim_groups(group_dict: Dict[str, Set[int]], node_to_subtree: Dict[int, Set[int]]) -> Dict[str, Set[int]]:
+    trimmed = {}
+    for label, points in group_dict.items():
+        # Find smallest subtree that contains all group points
+        candidates = []
+        for node, subtree in node_to_subtree.items():
+            if points.issubset(subtree):
+                candidates.append((node, subtree))
+
+        if candidates:
+            # Use the smallest subtree (most specific)
+            best_node, best_subtree = min(candidates, key=lambda item: len(item[1]))
+            # Remove the best_node itself if it's not truly part of the group
+            cleaned = points.intersection(best_subtree - {best_node})
+            trimmed[label] = cleaned
+        else:
+            # fallback if no matching subtree
+            trimmed[label] = points
+    return trimmed
+
+
+# # Your initial input
+# initial_tree = [1, 2, 3, 4, 5, 6, 7, 8, [9, [10], [11, 12]], [13, 14, 15, 16, 17, 18]]
+#
+# group_dict = {
+#     'Bob': {8, 13, 14},
+#     'Dave': {8, 9, 10, 11},
+#     'Dendrite': set(range(1, 19)),
+#     'FIL: Filaments 1': set(range(1, 19)),
+#     'http://uri.interlex.org/base/ilx_0777077': set(range(1, 19)),
+#     'http://uri.interlex.org/base/ilx_0777078': {2, 3, 4},
+#     'http://uri.interlex.org/base/ilx_0777079': {3, 4, 5},
+#     'http://uri.interlex.org/base/ilx_0777080': {4, 5, 6, 7, 8, 9, 13},
+#     'http://uri.interlex.org/base/ilx_0777081': {8, 9, 10, 11},
+#     'http://uri.interlex.org/base/ilx_0777082': {9, 10},
+#     'http://uri.interlex.org/base/ilx_0777083': {9, 11, 12},
+#     'http://uri.interlex.org/base/ilx_0777084': {8, 13, 14},
+#     'http://uri.interlex.org/base/ilx_0777085': {13, 14, 15, 16, 17},
+#     'http://uri.interlex.org/base/ilx_0777086': {16, 17, 18},
+#     'http://uri.interlex.org/base/ilx_0777087': {17, 18},
+#     'inner submucosal nerve plexus': set(range(1, 19))
+# }
+#
+# # Build node → subtree map
+# node_to_subtree = build_subtree_map(initial_tree)
+#
+# # Trim group entries
+# trimmed_groups = trim_groups(group_dict, node_to_subtree)
+#
+# # Output
+# print("✅ Trimmed Groups:")
+# pprint(trimmed_groups)
 
 
 def build_node_graph(elements):
     graph = defaultdict(lambda: {"start": [], "end": []})
 
     for element in elements:
-        node1, node2 = element["nodes"]
+        node1 = element["start_node"]
+        node2 = element["end_node"]
         graph[node1]["start"].append(element["id"])
         graph[node2]["end"].append(element["id"])
 
     return graph
 
 
-def find_neighbours(element, node_graph, node_index, node_bucket):
-    node_id = element["nodes"][node_index]
+def find_neighbours(element, node_graph, node_bucket):
+    node_id = element[f"{node_bucket}_node"]
     return node_graph[node_id][node_bucket]
 
 
@@ -23,8 +105,8 @@ def build_element_graph(elements, node_graph):
     element_graph = {}
 
     for element in elements:
-        forward_neighbours = find_neighbours(element, node_graph, 1, "start")
-        backward_neighbours = find_neighbours(element, node_graph, 0, "end")
+        forward_neighbours = find_neighbours(element, node_graph, "start")
+        backward_neighbours = find_neighbours(element, node_graph, "end")
         element_graph[element["id"]] = {
             "forward": forward_neighbours,
             "backward": backward_neighbours
@@ -86,7 +168,8 @@ def _build_maps(elements):
     node_map = {}
     element_map = {}
     for element in elements:
-        start, end = element['nodes']
+        start= element['start_node']
+        end = element['end_node']
         for node_id in [start, end]:
             if node_id not in element_map:
                 element_map[node_id] = set()
@@ -99,6 +182,55 @@ def _build_maps(elements):
     return node_map, element_map
 
 
+def find_maximal_non_branching_paths(graph):
+    outgoing_edges = defaultdict(list)
+    incoming_edges = defaultdict(list)
+    all_nodes = set()
+
+    for segment in graph:
+        start = segment['start_node']
+        end = segment['end_node']
+        outgoing_edges[start].append(end)
+        incoming_edges[end].append(start)
+        all_nodes.add(start)
+        all_nodes.add(end)
+
+    paths = []
+    visited = set()
+    branching_nodes = {}
+
+    def dfs(node_local, path):
+        visited.add(node_local)
+        path.append(node_local)
+        if len(outgoing_edges[node_local]) != 1:
+            paths.append(path[:])
+            return
+        for neighbor in outgoing_edges[node_local]:
+            if neighbor not in visited:
+                dfs(neighbor, path)
+        # path.pop()
+
+    nodes = list(outgoing_edges.keys())
+    while len(nodes):
+        node = nodes.pop(0)
+        if node not in visited:
+            dfs(node, [])
+
+    terminal_nodes = all_nodes.difference(visited)
+    for node in terminal_nodes:
+        paths.append([node])
+
+    is_tree = True
+    for node in all_nodes:
+        if len(outgoing_edges[node]) > 1:
+            branching_nodes[node] = outgoing_edges[node]
+        if len(incoming_edges[node]) > 1:
+            is_tree = False
+            branching_nodes[node] = list(set(branching_nodes.get(node, []) + incoming_edges[node]))
+
+    return paths, branching_nodes, is_tree
+
+
 def determine_forest(elements):
     node_graph = build_node_graph(elements)
     element_graph = build_element_graph(elements, node_graph)
@@ -108,6 +240,7 @@ def determine_forest(elements):
     visited = set()
 
     forest = []
+    forest_members = []
     remainder = all_el_ids.difference(visited)
     while remainder:
         # Select a random element.
@@ -118,12 +251,19 @@ def determine_forest(elements):
 
         # Perform depth-first traversal from the starting element.
         starting_element_id = backward_path[-1]
-        start_node = next(item['nodes'][0] for item in elements if item['id'] == starting_element_id)
+        start_node = next(item['start_node'] for item in elements if item['id'] == starting_element_id)
+
+        visited_before = visited.copy()
+
         forward_path = build_nested_list(node_map, start_node, node_to_element_map, visited)
+
+        used_elements = visited.difference(visited_before)
+
         forest.append(forward_path)
+        forest_members.append(used_elements)
         remainder = all_el_ids.difference(visited)
 
-    return forest
+    return forest, forest_members
 
 
 def is_list_of_integers(lst):
@@ -166,10 +306,122 @@ def _match_group(target_set, labelled_sets):
     return matched_labels
 
 
-def classify_forest(forest, nodes, node_id_map, fields, group_fields):
+def adjust_structure_and_groups(nested_list, groups):
+    new_structure = []
+    new_groups = {key: set() for key in groups.keys()}
+
+    def recursive_process(sublist):
+        current_sublist = []
+        for item in sublist:
+            if isinstance(item, int):
+                current_sublist.append(item)
+                # Check which groups this item belongs to
+                for key, indices in groups.items():
+                    if item in indices:
+                        new_groups[key].add(item)
+            elif isinstance(item, list):
+                # Recursively process the sublist
+                processed_sublist = recursive_process(item)
+                if processed_sublist:
+                    current_sublist.append(processed_sublist)
+        return current_sublist
+
+    new_structure = recursive_process(nested_list)
+    return new_structure, new_groups
+
+
+def build_subtrees(branch, parent=None, node_to_subtree=None):
+    if node_to_subtree is None:
+        node_to_subtree = {}
+
+    if isinstance(branch, list):
+        for b in branch:
+            build_subtrees(b, parent, node_to_subtree)
+    else:
+        # Leaf node
+        if branch not in node_to_subtree:
+            node_to_subtree[branch] = set()
+        node_to_subtree[branch].add(branch)
+        if parent is not None:
+            if parent not in node_to_subtree:
+                node_to_subtree[parent] = set()
+            node_to_subtree[parent].update(node_to_subtree[branch])
+
+    return node_to_subtree
+
+# Original nested list and groups
+# nested_list = [[1, 2, 3, 4, 5, 6, 7, 8, [9, [10], [11, 12]], [13, 14, 15, 16, 17, 18]]]
+# groups = {
+#     'Bob': {8, 13, 14},
+#     'Dave': {8, 9, 10, 11},
+#     'Dendrite': {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},
+#     'FIL: Filaments 1': {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},
+#     'http://uri.interlex.org/base/ilx_0777077': {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},
+#     'http://uri.interlex.org/base/ilx_0777078': {2, 3, 4},
+#     'http://uri.interlex.org/base/ilx_0777079': {3, 4, 5},
+#     'http://uri.interlex.org/base/ilx_0777080': {4, 5, 6, 7, 8, 9, 13},
+#     'http://uri.interlex.org/base/ilx_0777081': {8, 9, 10, 11},
+#     'http://uri.interlex.org/base/ilx_0777082': {9, 10},
+#     'http://uri.interlex.org/base/ilx_0777083': {9, 11, 12},
+#     'http://uri.interlex.org/base/ilx_0777084': {8, 13, 14},
+#     'http://uri.interlex.org/base/ilx_0777085': {13, 14, 15, 16, 17},
+#     'http://uri.interlex.org/base/ilx_0777086': {16, 17, 18},
+#     'http://uri.interlex.org/base/ilx_0777087': {17, 18},
+#     'inner submucosal nerve plexus': {1, 2, 3, 4, 5, 6, 7, 8
+
+
+def adjust_groups_to_structure(nested_list, groups):
+    """
+    Adjust group memberships to match the actual nested tree structure.
+
+    Parameters:
+    - nested_list: A nested list of integers representing the tree structure.
+    - groups: A dictionary mapping group names to sets of point indices.
+
+    Returns:
+    - A dictionary with adjusted group memberships.
+    """
+
+    def flatten(nested):
+        """Recursively flatten a nested list."""
+        flat = []
+        for item in nested:
+            if isinstance(item, list):
+                flat.extend(flatten(item))
+            else:
+                flat.append(item)
+        return flat
+
+    valid_points = set(flatten(nested_list))
+    adjusted = {group: points & valid_points for group, points in groups.items()}
+    return adjusted
+
+
+def restructure_list(nested_list, target_set):
+    def helper(sublist, target_set_local ):
+        if isinstance(sublist, list):
+            new_sublist = []
+            temp_list = []
+            for item in sublist:
+                if isinstance(item, list):
+                    new_sublist.append(helper(item, target_set_local))
+                elif item in target_set_local:
+                    temp_list.append(item)
+                else:
+                    new_sublist.append(item)
+            if temp_list:
+                new_sublist.append(temp_list)
+            return new_sublist
+        else:
+            return sublist
+    return helper(nested_list, target_set)
+
+
+def classify_forest(forest, plant_path_info, nodes, node_id_map, fields, group_fields):
     classification = {'contours': [], 'trees': []}
     grouped_nodes = get_group_nodes(group_fields)
     for index, plant in enumerate(forest):
+        print(plant)
         list_of_ints = is_list_of_integers(plant)
         is_contour = True if list_of_ints and not has_subgroup_of(grouped_nodes, set(plant)) else False
         # print('is_contour:', is_contour)
@@ -192,6 +444,10 @@ def classify_forest(forest, nodes, node_id_map, fields, group_fields):
             metadata["closed"] = True
 
         matching_labels = _match_group(point_identifiers, grouped_nodes)
+        print('grouped_nodes')
+        print(grouped_nodes)
+        for gg in grouped_nodes.values():
+            print(gg, gg < set(point_identifiers))
 
         colour = get_colour(start_node, fields)
         metadata["colour"] = colour

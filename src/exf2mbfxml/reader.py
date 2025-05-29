@@ -4,8 +4,10 @@ from cmlibs.utils.zinc.field import field_is_managed_coordinates
 from cmlibs.zinc.context import Context
 from cmlibs.zinc.result import RESULT_OK
 
-from exf2mbfxml.analysis import determine_forest, classify_forest
+from exf2mbfxml.analysis import determine_forest, classify_forest, adjust_groups_to_structure, adjust_structure_and_groups, build_subtrees, build_subtree_map, trim_groups, \
+    find_maximal_non_branching_paths
 from exf2mbfxml.exceptions import EXFFile
+from exf2mbfxml.zinc import get_group_nodes
 
 
 def read_exf(file_name):
@@ -91,6 +93,7 @@ def extract_mesh_info(region):
         nodes = []
         node_identifier_to_index_map = {}
         while element.isValid():
+            element_identifier = element.getIdentifier()
             local_node_identifiers = []
             for i in range(local_nodes_count):
                 node = element.getNode(eft, i + 1)
@@ -100,15 +103,22 @@ def extract_mesh_info(region):
                     nodes.append(node)
 
                 local_node_identifiers.append(node_identifier)
-            element_identifier = element.getIdentifier()
             # Element(element_identifier, local_node_identifiers[0], local_node_identifiers[1])
-            analysis_elements[index] = {"id": element_identifier, "nodes": local_node_identifiers}
+            analysis_elements[index] = {'id': element_identifier, 'start_node': local_node_identifiers[0], 'end_node': local_node_identifiers[1]}
             element_identifier_to_index_map[element_identifier] = index
             element = element_iterator.next()
             index += 1
 
-        forest = determine_forest(analysis_elements)
-        mesh_info = classify_forest(forest, nodes, node_identifier_to_index_map, node_fields, group_fields)
+        print('analysis of elements:')
+        print(analysis_elements)
+        forest, forest_members = determine_forest(analysis_elements)
+
+        plant_path_info = []
+        for members in forest_members:
+            subset = [el for el in analysis_elements if el['id'] in members]
+            plant_path_info.append(find_maximal_non_branching_paths(subset))
+
+        mesh_info = classify_forest(forest, plant_path_info, nodes, node_identifier_to_index_map, node_fields, group_fields)
 
     return mesh_info
 
