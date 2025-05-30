@@ -1,0 +1,260 @@
+EX Version: 3
+Region: /
+!#nodeset nodes
+Define node template: node1
+Shape. Dimension=0
+#Fields=4
+1) coordinates, coordinate, rectangular cartesian, real, #Components=3
+ x. #Values=1 (value)
+ y. #Values=1 (value)
+ z. #Values=1 (value)
+2) radius, field, rectangular cartesian, real, #Components=1
+ 1. #Values=1 (value)
+3) resolution, field, rectangular cartesian, real, #Components=1
+ 1. #Values=1 (value)
+4) rgb, field, rectangular cartesian, real, #Components=3
+ 1. #Values=1 (value)
+ 2. #Values=1 (value)
+ 3. #Values=1 (value)
+Node template: node1
+Node: 1
+  8.794459999999999e+03
+ -1.301348000000000e+04
+ -5.355000000000000e+03
+  5.000000000000000e-01
+  1.297297000000000e+00
+  1.000000000000000e+00
+  0.000000000000000e+00
+  0.000000000000000e+00
+Node: 2
+  8.871000000000000e+03
+ -1.306926000000000e+04
+ -5.355000000000000e+03
+  5.000000000000000e-01
+  1.297297000000000e+00
+  1.000000000000000e+00
+  0.000000000000000e+00
+  0.000000000000000e+00
+Node: 3
+  8.939760000000000e+03
+ -1.309131000000000e+04
+ -5.355000000000000e+03
+  5.000000000000000e-01
+  1.297297000000000e+00
+  1.000000000000000e+00
+  0.000000000000000e+00
+  0.000000000000000e+00
+Node: 4
+  8.994250000000000e+03
+ -1.307445000000000e+04
+ -5.355000000000000e+03
+  5.000000000000000e-01
+  1.297297000000000e+00
+  1.000000000000000e+00
+  0.000000000000000e+00
+  0.000000000000000e+00
+Node: 5
+  9.066900000000000e+03
+ -1.304202000000000e+04
+ -5.355000000000000e+03
+  5.000000000000000e-01
+  1.297297000000000e+00
+  1.000000000000000e+00
+  0.000000000000000e+00
+  0.000000000000000e+00
+Node: 6
+  9.108410000000000e+03
+ -1.297715000000000e+04
+ -5.355000000000000e+03
+  5.000000000000000e-01
+  1.297297000000000e+00
+  1.000000000000000e+00
+  0.000000000000000e+00
+  0.000000000000000e+00
+Node: 7
+  9.060410000000000e+03
+ -1.289931000000000e+04
+ -5.355000000000000e+03
+  5.000000000000000e-01
+  1.297297000000000e+00
+  1.000000000000000e+00
+  0.000000000000000e+00
+  0.000000000000000e+00
+Node: 8
+  8.972190000000001e+03
+ -1.284483000000000e+04
+ -5.355000000000000e+03
+  5.000000000000000e-01
+  1.297297000000000e+00
+  1.000000000000000e+00
+  0.000000000000000e+00
+  0.000000000000000e+00
+Node: 9
+  8.886570000000000e+03
+ -1.281629000000000e+04
+ -5.355000000000000e+03
+  5.000000000000000e-01
+  1.297297000000000e+00
+  1.000000000000000e+00
+  0.000000000000000e+00
+  0.000000000000000e+00
+Node: 10
+  8.816520000000000e+03
+ -1.281499000000000e+04
+ -5.355000000000000e+03
+  5.000000000000000e-01
+  1.297297000000000e+00
+  1.000000000000000e+00
+  0.000000000000000e+00
+  0.000000000000000e+00
+Node: 11
+  8.736080000000000e+03
+ -1.285650000000000e+04
+ -5.355000000000000e+03
+  5.000000000000000e-01
+  1.297297000000000e+00
+  1.000000000000000e+00
+  0.000000000000000e+00
+  0.000000000000000e+00
+Node: 12
+  8.673809999999999e+03
+ -1.289672000000000e+04
+ -5.355000000000000e+03
+  5.000000000000000e-01
+  1.297297000000000e+00
+  1.000000000000000e+00
+  0.000000000000000e+00
+  0.000000000000000e+00
+Node: 13
+  8.672520000000000e+03
+ -1.296288000000000e+04
+ -5.355000000000000e+03
+  5.000000000000000e-01
+  1.297297000000000e+00
+  1.000000000000000e+00
+  0.000000000000000e+00
+  0.000000000000000e+00
+Node: 14
+  8.732190000000001e+03
+ -1.297975000000000e+04
+ -5.355000000000000e+03
+  5.000000000000000e-01
+  1.297297000000000e+00
+  1.000000000000000e+00
+  0.000000000000000e+00
+  0.000000000000000e+00
+!#mesh mesh1d, dimension=1, nodeset=nodes
+Define element template: element1
+Shape. Dimension=1, line
+#Scale factor sets=0
+#Nodes=2
+#Fields=4
+1) coordinates, coordinate, rectangular cartesian, real, #Components=3
+ x. l.Lagrange, no modify, standard node based.
+  #Nodes=2
+  1. #Values=1
+   Value labels: value
+  2. #Values=1
+   Value labels: value
+ y. l.Lagrange, no modify, standard node based.
+  #Nodes=2
+  1. #Values=1
+   Value labels: value
+  2. #Values=1
+   Value labels: value
+ z. l.Lagrange, no modify, standard node based.
+  #Nodes=2
+  1. #Values=1
+   Value labels: value
+  2. #Values=1
+   Value labels: value
+2) radius, field, rectangular cartesian, real, #Components=1
+ 1. l.Lagrange, no modify, standard node based.
+  #Nodes=2
+  1. #Values=1
+   Value labels: value
+  2. #Values=1
+   Value labels: value
+3) resolution, field, rectangular cartesian, real, #Components=1
+ 1. l.Lagrange, no modify, standard node based.
+  #Nodes=2
+  1. #Values=1
+   Value labels: value
+  2. #Values=1
+   Value labels: value
+4) rgb, field, rectangular cartesian, real, #Components=3
+ 1. l.Lagrange, no modify, standard node based.
+  #Nodes=2
+  1. #Values=1
+   Value labels: value
+  2. #Values=1
+   Value labels: value
+ 2. l.Lagrange, no modify, standard node based.
+  #Nodes=2
+  1. #Values=1
+   Value labels: value
+  2. #Values=1
+   Value labels: value
+ 3. l.Lagrange, no modify, standard node based.
+  #Nodes=2
+  1. #Values=1
+   Value labels: value
+  2. #Values=1
+   Value labels: value
+Element template: element1
+Element: 1
+ Nodes:
+ 1 2
+Element: 2
+ Nodes:
+ 2 3
+Element: 3
+ Nodes:
+ 3 4
+Element: 4
+ Nodes:
+ 4 5
+Element: 5
+ Nodes:
+ 5 6
+Element: 6
+ Nodes:
+ 6 7
+Element: 7
+ Nodes:
+ 7 8
+Element: 8
+ Nodes:
+ 8 9
+Element: 9
+ Nodes:
+ 9 10
+Element: 10
+ Nodes:
+ 10 11
+Element: 11
+ Nodes:
+ 11 12
+Element: 12
+ Nodes:
+ 12 13
+Element: 13
+ Nodes:
+ 13 14
+Element: 14
+ Nodes:
+ 14 1
+Group name: <property name="FillDensity"><n>0</n></property>
+!#nodeset nodes
+Node group:
+1..14
+!#mesh mesh1d, dimension=1, nodeset=nodes
+Element group:
+1..14
+Group name: Heart (7088)
+!#nodeset nodes
+Node group:
+1..14
+!#mesh mesh1d, dimension=1, nodeset=nodes
+Element group:
+1..14

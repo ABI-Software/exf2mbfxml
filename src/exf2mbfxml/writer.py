@@ -1,5 +1,6 @@
 import xml.etree.ElementTree as ET
 from exf2mbfxml import __version__ as package_version
+from exf2mbfxml.utilities import is_valid_xml
 
 
 def _is_trace_association(label):
@@ -30,6 +31,7 @@ def _write_contour(contour, parent_element):
     # Create the contour element
     contour_element = ET.SubElement(parent_element, "contour", attributes)
 
+    print(metadata)
     # Add properties
     global_uid = current_metadata.get('GUID', '')
     if global_uid:
@@ -49,7 +51,7 @@ def _write_contour(contour, parent_element):
 
     # Add points
     for point in points:
-        ET.SubElement(contour_element, "point", x=str(point[0]), y=str(point[1]), z=str(point[2]), d=str(point[3]))
+        _write_point(contour_element, point)
 
 
 def _define_properties(parent_element, labels):
@@ -62,8 +64,15 @@ def _define_properties(parent_element, labels):
         tag_name = 'Set'
         if label.startswith('http://') or label.startswith('https://'):
             tag_name = 'TraceAssociation'
-        set_property_element = ET.SubElement(parent_element, 'property', name=tag_name)
-        ET.SubElement(set_property_element, 's').text = label
+        elif is_valid_xml(label):
+            tag_name = None
+            child = ET.fromstring(label)
+            parent_element.append(child)
+
+        print(labels)
+        if tag_name is not None:
+            set_property_element = ET.SubElement(parent_element, 'property', name=tag_name)
+            ET.SubElement(set_property_element, 's').text = label
 
 
 def _write_point(parent_element, point):
@@ -104,16 +113,6 @@ def _write_tree(tree, parent_element):
                 attributes['rootclass'] = item
 
     _write_branch(parent_element, "tree", attributes, points, [], indexed_labels)
-    # tree_element = ET.SubElement(parent_element, "tree", attributes)
-    #
-    # _define_properties(tree_element, indexed_labels[(0,)])
-    # path = []
-    # for i, point in enumerate(points):
-    #     current_path = path + [i]
-    #     if isinstance(point[0], float):
-    #         ET.SubElement(tree_element, "point", x=str(point[0]), y=str(point[1]), z=str(point[2]), d=str(point[3]))
-    #     else:
-    #         _write_branch(tree_element, point, current_path, indexed_labels)
 
 
 def write_mbfxml(output_mbf, data, options=None):

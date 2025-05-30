@@ -154,6 +154,11 @@ class TestGetIdentifiersFunctions(unittest.TestCase):
         expected = [5, 6, 7]
         self.assertEqual(expected, get_identifiers_from_path(path, data))
 
+    def test_bad_path(self):
+        data = [1, 2, 3, 4, [5, 6, 7]]
+        path = (6, 0)
+        self.assertIsNone(get_identifiers_from_path(path, data))
+
 
 if __name__ == '__main__':
     unittest.main()

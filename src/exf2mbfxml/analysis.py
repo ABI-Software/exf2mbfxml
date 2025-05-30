@@ -259,6 +259,7 @@ def classify_forest(forest, plant_path_info, nodes, node_id_map, fields, group_f
     group_implied_structure = [set(v) for v in nodes_by_group.keys()]
 
     for index, plant in enumerate(forest):
+        print(plant)
         list_of_ints = is_list_of_integers(plant)
         is_contour = True if list_of_ints and not has_subgroup_of(grouped_nodes, set(plant)) else False
 
@@ -271,12 +272,12 @@ def classify_forest(forest, plant_path_info, nodes, node_id_map, fields, group_f
             plant.pop()
 
         points, point_identifiers = convert_plant_to_points(plant, nodes, node_id_map, fields)
-        if closed_contour:
+        # if closed_contour:
             # I think this will be okay for closed contours because the point_identifiers
             # will still match when start point is added back in later.
             # point_identifiers is a set and I don't know which identifier corresponds to
             # the last point in the list of points.
-            points.pop(0)
+            # points.pop(0)
 
         start_node = get_node(nodes, node_id_map,  plant[0])
 

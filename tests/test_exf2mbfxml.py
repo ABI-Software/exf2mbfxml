@@ -6,7 +6,6 @@ from unittest.mock import patch
 from exf2mbfxml.app import main
 from exf2mbfxml.exceptions import EXFFile
 from exf2mbfxml.reader import read_exf
-from exf2mbfxml.utilities import get_identifiers_from_path
 from exf2mbfxml.writer import write_mbfxml
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -47,8 +46,30 @@ class EXFReadModelTestCase(unittest.TestCase):
         self.assertIsNotNone(content)
         write_mbfxml(f"{basic_contour_exf_file}.xml", content, {})
 
+    def test_heart_contour(self):
+        basic_heart_contour_exf_file = _resource_path("basic_heart_contours.exf")
+        content = read_exf(basic_heart_contour_exf_file)
+        self.assertIsNotNone(content)
+        output_xml_file = f"{basic_heart_contour_exf_file}.xml"
+        write_mbfxml(output_xml_file, content, {})
+        with open(output_xml_file) as fh:
+            content = fh.readlines()
+            line_count = 23
+            self.assertEqual(line_count, len(content))
+
 
 class EXFTreeTestCase(unittest.TestCase):
+
+    def test_bad_input(self):
+        output_xml_file = _resource_path("rm.xml")
+        content = {'trees': [{}], 'contours': [{}]}
+        write_mbfxml(output_xml_file, content)
+        with open(output_xml_file) as fh:
+            content = fh.readlines()
+            line_count = 2
+            self.assertEqual(line_count, len(content))
+
+        os.remove(output_xml_file)
 
     def test_basic_tree(self):
         basic_tree_exf_file = _resource_path("basic_tree.exf")

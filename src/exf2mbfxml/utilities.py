@@ -1,3 +1,6 @@
+import xml.etree.ElementTree as ET
+
+
 def rgb_to_hex(rgb_value):
     """
     Convert a list of values between [0, 1] into a string representation using a leading #.
@@ -136,3 +139,11 @@ def get_identifiers_from_path(path, nested_list):
         return [item for item in target_list if isinstance(item, int)]
     except (IndexError, TypeError):
         return None
+
+
+def is_valid_xml(xml_string):
+    try:
+        ET.fromstring(xml_string)
+        return True
+    except ET.ParseError:
+        return False
