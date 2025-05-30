@@ -45,16 +45,40 @@ def _write_contour(contour, parent_element):
     if resolution is not None:
         ET.SubElement(contour_element, "resolution").text = str(resolution)
 
-    for label in labels:
-        tag_name = 'Set'
-        if label.startswith('http://') or label.startswith('https://'):
-            tag_name = 'TraceAssociation'
-        set_property_element = ET.SubElement(contour_element, 'property', name=tag_name)
-        ET.SubElement(set_property_element, 's').text = label
+    _define_properties(contour_element, labels)
 
     # Add points
     for point in points:
         ET.SubElement(contour_element, "point", x=str(point[0]), y=str(point[1]), z=str(point[2]), d=str(point[3]))
+
+
+def _define_properties(parent_element, labels):
+    """
+    Only useful for setting single string properties.
+    Will differentiate between trace association and non-trace associations
+    using a very basic heuristic.
+    """
+    for label in labels:
+        tag_name = 'Set'
+        if label.startswith('http://') or label.startswith('https://'):
+            tag_name = 'TraceAssociation'
+        set_property_element = ET.SubElement(parent_element, 'property', name=tag_name)
+        ET.SubElement(set_property_element, 's').text = label
+
+
+def _write_point(parent_element, point):
+    ET.SubElement(parent_element, "point", x=f'{point[0]:.2f}', y=f'{point[1]:.2f}', z=f'{point[2]:.2f}', d=f'{point[3]:.2f}')
+
+
+def _write_branch(parent_element, tag, attributes, points, path, indexed_labels):
+    branch_element = ET.SubElement(parent_element, tag, attrib=attributes)
+    _define_properties(branch_element, indexed_labels[tuple(path + [0])])
+    for i, point in enumerate(points):
+        current_path = path + [i]
+        if isinstance(point[0], float):
+            _write_point(branch_element, point)
+        else:
+            _write_branch(branch_element, "branch", {}, point, current_path, indexed_labels)
 
 
 def _write_tree(tree, parent_element):
@@ -63,8 +87,33 @@ def _write_tree(tree, parent_element):
     if not points:
         return
 
-    print(points)
-    print(metadata)
+    top_level = parent_element.tag == 'mbf'
+
+    global_labels = metadata['global'].get('labels', [])
+    indexed_labels = metadata['indexed']
+
+    TREE_TYPES = ['Dendrite']
+
+    attributes = {'color': metadata['global'].get('colour', '#000000')}
+    if global_labels:
+        filtered = [s for s in global_labels if not _is_trace_association(s)]
+        for item in filtered:
+            if item in TREE_TYPES:
+                attributes['type'] = item
+            else:
+                attributes['rootclass'] = item
+
+    _write_branch(parent_element, "tree", attributes, points, [], indexed_labels)
+    # tree_element = ET.SubElement(parent_element, "tree", attributes)
+    #
+    # _define_properties(tree_element, indexed_labels[(0,)])
+    # path = []
+    # for i, point in enumerate(points):
+    #     current_path = path + [i]
+    #     if isinstance(point[0], float):
+    #         ET.SubElement(tree_element, "point", x=str(point[0]), y=str(point[1]), z=str(point[2]), d=str(point[3]))
+    #     else:
+    #         _write_branch(tree_element, point, current_path, indexed_labels)
 
 
 def write_mbfxml(output_mbf, data, options=None):

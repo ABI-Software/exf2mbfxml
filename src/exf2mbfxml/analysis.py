@@ -294,7 +294,7 @@ def classify_forest(forest, plant_path_info, nodes, node_id_map, fields, group_f
 
         if not is_contour:
             unique_paths = get_unique_list_paths(plant)
-            metadata['indexed'] = {u: _match_group(get_identifiers_from_path(u, plant), grouped_nodes) for u in unique_paths}
+            metadata['indexed'] = {u: _match_group(set(get_identifiers_from_path(u, plant)), grouped_nodes) for u in unique_paths}
 
         category = 'contours' if is_contour else 'trees'
         classification[category].append({"points": points, "metadata": metadata})

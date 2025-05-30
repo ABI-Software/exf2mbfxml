@@ -6,6 +6,7 @@ from unittest.mock import patch
 from exf2mbfxml.app import main
 from exf2mbfxml.exceptions import EXFFile
 from exf2mbfxml.reader import read_exf
+from exf2mbfxml.utilities import get_identifiers_from_path
 from exf2mbfxml.writer import write_mbfxml
 
 here = os.path.abspath(os.path.dirname(__file__))
