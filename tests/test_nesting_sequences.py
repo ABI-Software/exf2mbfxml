@@ -1,7 +1,7 @@
 
 import unittest
 
-from exf2mbfxml.utilities import nest_multiple_sequences, find_matching_subsequence, duplicate_structure, get_unique_list_paths
+from exf2mbfxml.utilities import nest_multiple_sequences, find_matching_subsequence, get_unique_list_paths
 
 
 class TestNestingFunctions(unittest.TestCase):
