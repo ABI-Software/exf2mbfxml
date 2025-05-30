@@ -125,3 +125,25 @@ def duplicate_structure(nested_list):
         return new_structure
 
     return _helper(nested_list), list(trace.keys())
+
+
+def get_unique_list_paths(nested_list):
+    if not isinstance(nested_list, list):
+        return None
+
+    trace = {}
+
+    def _helper(nested_list_local, path=None):
+        if path is None:
+            path = []
+        i = 0
+        while i < len(nested_list_local):
+            current_path = path + [i]
+            if isinstance(nested_list_local[i], list):
+                _helper(nested_list_local[i], current_path)
+            elif i == 0:
+                trace[tuple(current_path)] = 1
+            i += 1
+
+    _helper(nested_list)
+    return list(trace.keys())

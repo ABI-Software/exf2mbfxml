@@ -1,7 +1,7 @@
 
 import unittest
 
-from exf2mbfxml.utilities import nest_multiple_sequences, find_matching_subsequence, duplicate_structure
+from exf2mbfxml.utilities import nest_multiple_sequences, find_matching_subsequence, duplicate_structure, get_unique_list_paths
 
 
 class TestNestingFunctions(unittest.TestCase):
@@ -118,27 +118,21 @@ class TestFindSubsequenceFunctions(unittest.TestCase):
         self.assertIsNone(find_matching_subsequence(data, sequence))
 
 
-class TestDuplicateStructureFunctions(unittest.TestCase):
+class TestUniqueListPathsFunctions(unittest.TestCase):
     def test_invalid_input(self):
         data = 1
-        expected = (None, None)
-        self.assertEqual(expected, duplicate_structure(data))
+        expected = None
+        self.assertEqual(expected, get_unique_list_paths(data))
 
     def test_simple(self):
         data = [1, 2, 3, 4, [5, 6, 7]]
-        expected = [None, [None]]
-        structure, paths = duplicate_structure(data)
-        self.assertEqual(expected, structure)
         expected = [(0,), (4, 0)]
-        self.assertEqual(expected, paths)
+        self.assertEqual(expected, get_unique_list_paths(data))
 
     def test_multi_layered(self):
         data = [1, 2, [3, 4, [5, [6, 7]]]]
-        expected = [None, [None, [None, [None]]]]
-        structure, paths = duplicate_structure(data)
-        self.assertEqual(expected, structure)
         expected = [(0,), (2, 0), (2, 2, 0), (2, 2, 1, 0)]
-        self.assertEqual(expected, paths)
+        self.assertEqual(expected, get_unique_list_paths(data))
 
 
 if __name__ == '__main__':

@@ -12,7 +12,7 @@ def _write_contour(contour, parent_element):
     if not points:
         return
 
-    current_metadata = metadata[0]
+    current_metadata = metadata['global']
     top_level = parent_element.tag == 'mbf'
     labels = current_metadata.get('labels', [])
     attributes = {'colour': current_metadata.get('colour', '#000000'), 'shape': 'Contour'}
