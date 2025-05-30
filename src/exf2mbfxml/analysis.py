@@ -1,5 +1,4 @@
-# from collections import defaultdict
-from exf2mbfxml.utilities import nest_sequence, duplicate_structure
+from exf2mbfxml.utilities import nest_sequence, get_unique_list_paths
 from exf2mbfxml.zinc import get_point, get_colour, get_resolution, get_group_nodes
 
 from typing import Union, List, Dict, Set
@@ -7,81 +6,6 @@ from collections import defaultdict
 # from pprint import pprint
 
 Branch = Union[int, List["Branch"]]
-
-
-def build_subtree_map(tree: Branch, node_to_subtree: Dict[int, Set[int]] = None) -> Dict[int, Set[int]]:
-    if node_to_subtree is None:
-        node_to_subtree = defaultdict(set)
-
-    def helper(node: Branch, parent=None) -> Set[int]:
-        if isinstance(node, int):
-            node_to_subtree[node].add(node)
-            return {node}
-        else:
-            all_nodes = set()
-            for child in node:
-                child_nodes = helper(child)
-                all_nodes.update(child_nodes)
-            if isinstance(node[0], int):  # mark the first node as the parent
-                node_to_subtree[node[0]].update(all_nodes)
-            return all_nodes
-
-    helper(tree)
-    return node_to_subtree
-
-
-def trim_groups(group_dict: Dict[str, Set[int]], node_to_subtree: Dict[int, Set[int]]) -> Dict[str, Set[int]]:
-    trimmed = {}
-    for label, points in group_dict.items():
-        # Find smallest subtree that contains all group points
-        candidates = []
-        for node, subtree in node_to_subtree.items():
-            if points.issubset(subtree):
-                candidates.append((node, subtree))
-
-        if candidates:
-            # Use the smallest subtree (most specific)
-            best_node, best_subtree = min(candidates, key=lambda item: len(item[1]))
-            # Remove the best_node itself if it's not truly part of the group
-            cleaned = points.intersection(best_subtree - {best_node})
-            trimmed[label] = cleaned
-        else:
-            # fallback if no matching subtree
-            trimmed[label] = points
-    return trimmed
-
-
-# # Your initial input
-# initial_tree = [1, 2, 3, 4, 5, 6, 7, 8, [9, [10], [11, 12]], [13, 14, 15, 16, 17, 18]]
-#
-# group_dict = {
-#     'Bob': {8, 13, 14},
-#     'Dave': {8, 9, 10, 11},
-#     'Dendrite': set(range(1, 19)),
-#     'FIL: Filaments 1': set(range(1, 19)),
-#     'http://uri.interlex.org/base/ilx_0777077': set(range(1, 19)),
-#     'http://uri.interlex.org/base/ilx_0777078': {2, 3, 4},
-#     'http://uri.interlex.org/base/ilx_0777079': {3, 4, 5},
-#     'http://uri.interlex.org/base/ilx_0777080': {4, 5, 6, 7, 8, 9, 13},
-#     'http://uri.interlex.org/base/ilx_0777081': {8, 9, 10, 11},
-#     'http://uri.interlex.org/base/ilx_0777082': {9, 10},
-#     'http://uri.interlex.org/base/ilx_0777083': {9, 11, 12},
-#     'http://uri.interlex.org/base/ilx_0777084': {8, 13, 14},
-#     'http://uri.interlex.org/base/ilx_0777085': {13, 14, 15, 16, 17},
-#     'http://uri.interlex.org/base/ilx_0777086': {16, 17, 18},
-#     'http://uri.interlex.org/base/ilx_0777087': {17, 18},
-#     'inner submucosal nerve plexus': set(range(1, 19))
-# }
-#
-# # Build node → subtree map
-# node_to_subtree = build_subtree_map(initial_tree)
-#
-# # Trim group entries
-# trimmed_groups = trim_groups(group_dict, node_to_subtree)
-#
-# # Output
-# print("✅ Trimmed Groups:")
-# pprint(trimmed_groups)
 
 
 def build_node_graph(elements):
@@ -344,7 +268,7 @@ def classify_forest(forest, plant_path_info, nodes, node_id_map, fields, group_f
 
         closed_contour = is_contour and plant[0] == plant[-1]
         if closed_contour:
-            plant.pop(0)
+            plant.pop()
 
         points, point_identifiers = convert_plant_to_points(plant, nodes, node_id_map, fields)
         if closed_contour:
@@ -352,28 +276,28 @@ def classify_forest(forest, plant_path_info, nodes, node_id_map, fields, group_f
             # will still match when start point is added back in later.
             # point_identifiers is a set and I don't know which identifier corresponds to
             # the last point in the list of points.
-            points.pop()
+            points.pop(0)
 
         start_node = get_node(nodes, node_id_map,  plant[0])
 
-        metadata = {}
-        if closed_contour:
-            metadata["closed"] = True
-
         print(point_identifiers)
-        print(duplicate_structure(plant))
-        matching_labels = _match_group(point_identifiers, grouped_nodes)
+        print(get_unique_list_paths(plant))
+        matching_global_labels = _match_group(point_identifiers, grouped_nodes)
         # for gg in grouped_nodes.values():
         #     print(gg, gg < set(point_identifiers))
 
         colour = get_colour(start_node, fields)
-        metadata["colour"] = colour
-        metadata['labels'] = matching_labels
+        metadata = {'global': {'labels': matching_global_labels, 'colour': colour}}
+        if closed_contour:
+            metadata['global']['closed'] = True
         resolution = get_resolution(start_node, fields)
         if resolution is not None:
-            metadata['resolution'] = resolution
+            metadata['global']['resolution'] = resolution
+
+        if not is_contour:
+            metadata['indexed'] = {}
 
         category = 'contours' if is_contour else 'trees'
-        classification[category].append({"points": points, "metadata": [metadata]})
+        classification[category].append({"points": points, "metadata": metadata})
 
     return classification
