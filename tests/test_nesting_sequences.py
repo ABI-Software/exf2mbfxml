@@ -1,7 +1,7 @@
 
 import unittest
 
-from exf2mbfxml.utilities import nest_multiple_sequences, find_matching_subsequence, get_unique_list_paths
+from exf2mbfxml.utilities import nest_multiple_sequences, find_matching_subsequence, get_unique_list_paths, get_identifiers_from_path
 
 
 class TestNestingFunctions(unittest.TestCase):
@@ -133,6 +133,26 @@ class TestUniqueListPathsFunctions(unittest.TestCase):
         data = [1, 2, [3, 4, [5, [6, 7]]]]
         expected = [(0,), (2, 0), (2, 2, 0), (2, 2, 1, 0)]
         self.assertEqual(expected, get_unique_list_paths(data))
+
+
+class TestGetIdentifiersFunctions(unittest.TestCase):
+    def test_invalid_input(self):
+        data = 1
+        path = None
+        expected = None
+        self.assertEqual(expected, get_identifiers_from_path(path, data))
+
+    def test_simple(self):
+        data = [1, 2, 3, 4, [5, 6, 7]]
+        path = (0,)
+        expected = [1, 2, 3, 4]
+        self.assertEqual(expected, get_identifiers_from_path(path, data))
+
+    def test_nested(self):
+        data = [1, 2, 3, 4, [5, 6, 7]]
+        path = (4, 0)
+        expected = [5, 6, 7]
+        self.assertEqual(expected, get_identifiers_from_path(path, data))
 
 
 if __name__ == '__main__':

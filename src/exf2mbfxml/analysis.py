@@ -1,4 +1,4 @@
-from exf2mbfxml.utilities import nest_sequence, get_unique_list_paths
+from exf2mbfxml.utilities import nest_sequence, get_unique_list_paths, get_identifiers_from_path
 from exf2mbfxml.zinc import get_point, get_colour, get_resolution, get_group_nodes
 
 from typing import Union, List, Dict, Set
@@ -280,8 +280,6 @@ def classify_forest(forest, plant_path_info, nodes, node_id_map, fields, group_f
 
         start_node = get_node(nodes, node_id_map,  plant[0])
 
-        print(point_identifiers)
-        print(get_unique_list_paths(plant))
         matching_global_labels = _match_group(point_identifiers, grouped_nodes)
         # for gg in grouped_nodes.values():
         #     print(gg, gg < set(point_identifiers))
@@ -295,7 +293,8 @@ def classify_forest(forest, plant_path_info, nodes, node_id_map, fields, group_f
             metadata['global']['resolution'] = resolution
 
         if not is_contour:
-            metadata['indexed'] = {}
+            unique_paths = get_unique_list_paths(plant)
+            metadata['indexed'] = {u: _match_group(get_identifiers_from_path(u, plant), grouped_nodes) for u in unique_paths}
 
         category = 'contours' if is_contour else 'trees'
         classification[category].append({"points": points, "metadata": metadata})

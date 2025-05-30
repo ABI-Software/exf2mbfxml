@@ -122,3 +122,17 @@ def get_unique_list_paths(nested_list):
 
     _helper(nested_list)
     return list(trace.keys())
+
+
+def get_identifiers_from_path(path, nested_list):
+    if not isinstance(path, tuple) or not isinstance(nested_list, list):
+        return None
+
+    try:
+        target_list = nested_list
+        for index in path[:-1]:
+            target_list = target_list[index]
+
+        return [item for item in target_list if isinstance(item, int)]
+    except (IndexError, TypeError):
+        return None
