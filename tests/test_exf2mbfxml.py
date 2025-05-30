@@ -73,6 +73,10 @@ class EXFTreeTestCase(unittest.TestCase):
         output_xml_file = f"{branched_tree_exf_file}.xml"
         write_mbfxml(output_xml_file, content)
         self.assertTrue(os.path.isfile(output_xml_file))
+        with open(output_xml_file) as fh:
+            content = fh.readlines()
+            line_count = 85
+            self.assertEqual(line_count, len(content))
 
 
 if __name__ == "__main__":
