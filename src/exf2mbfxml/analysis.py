@@ -210,7 +210,7 @@ def _is_list_of_integers(lst):
 
 
 def _has_subgroup_of(groups, outer_set):
-    return any(val < outer_set for val in groups.values())
+    return any(val < outer_set for val in groups.values() if val)
 
 
 def _get_node(nodes, node_id_map, node_id):
