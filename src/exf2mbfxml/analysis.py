@@ -88,22 +88,15 @@ def _traverse_forward_path(node_map, start_node, node_to_element_map, visited):
 
 
 def _build_maps(elements):
-    node_map = {}
-    reverse_node_map = {}
-    element_map = {}
+    node_map = defaultdict(list)
+    reverse_node_map = defaultdict(list)
+    element_map = defaultdict(set)
     for element in elements:
-        start= element['start_node']
+        start = element['start_node']
         end = element['end_node']
-        for node_id in [start, end]:
-            if node_id not in element_map:
-                element_map[node_id] = set()
-            element_map[node_id].add(element['id'])
-
-        if start not in node_map:
-            node_map[start] = []
+        element_map[start].add(element['id'])
+        element_map[end].add(element['id'])
         node_map[start].append(end)
-        if end not in reverse_node_map:
-            reverse_node_map[end] = []
         reverse_node_map[end].append(start)
 
     return node_map, reverse_node_map, element_map
