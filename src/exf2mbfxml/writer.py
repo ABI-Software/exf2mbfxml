@@ -69,7 +69,6 @@ def _define_properties(parent_element, labels):
             child = ET.fromstring(label)
             parent_element.append(child)
 
-        print(labels)
         if tag_name is not None:
             set_property_element = ET.SubElement(parent_element, 'property', name=tag_name)
             ET.SubElement(set_property_element, 's').text = label

@@ -100,5 +100,27 @@ class EXFTreeTestCase(unittest.TestCase):
             self.assertEqual(line_count, len(content))
 
 
+class EXFVesselTestCase(unittest.TestCase):
+
+    def test_bad_input(self):
+        output_xml_file = _resource_path("rm.xml")
+        content = {'trees': [{}], 'contours': [{}], 'vessels': [{}]}
+        write_mbfxml(output_xml_file, content)
+        with open(output_xml_file) as fh:
+            content = fh.readlines()
+            line_count = 2
+            self.assertEqual(line_count, len(content))
+
+        os.remove(output_xml_file)
+
+    def test_simple_vessel(self):
+        basic_tree_exf_file = _resource_path("simple_vessel_structure.exf")
+        content = read_exf(basic_tree_exf_file)
+        self.assertIsNotNone(content)
+        output_xml_file = f"{basic_tree_exf_file}.xml"
+        write_mbfxml(output_xml_file, content)
+        self.assertTrue(os.path.isfile(output_xml_file))
+
+
 if __name__ == "__main__":
     unittest.main()

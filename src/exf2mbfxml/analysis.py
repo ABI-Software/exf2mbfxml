@@ -1,7 +1,7 @@
 from exf2mbfxml.utilities import nest_sequence, get_unique_list_paths, get_identifiers_from_path
 from exf2mbfxml.zinc import get_point, get_colour, get_resolution, get_group_nodes
 
-from typing import Union, List, Dict, Set
+from typing import Union, List
 from collections import defaultdict
 # from pprint import pprint
 
@@ -20,17 +20,17 @@ def build_node_graph(elements):
     return graph
 
 
-def find_neighbours(element, node_graph, node_bucket):
-    node_id = element[f"{node_bucket}_node"]
-    return node_graph[node_id][node_bucket]
+def find_neighbours(element, node_graph, buckets):
+    node_id = element[buckets[0]]
+    return node_graph[node_id][buckets[1]]
 
 
 def build_element_graph(elements, node_graph):
     element_graph = {}
 
     for element in elements:
-        forward_neighbours = find_neighbours(element, node_graph, "start")
-        backward_neighbours = find_neighbours(element, node_graph, "end")
+        forward_neighbours = find_neighbours(element, node_graph, ["end_node", "start"])
+        backward_neighbours = find_neighbours(element, node_graph, ["start_node", "end"])
         element_graph[element["id"]] = {
             "forward": forward_neighbours,
             "backward": backward_neighbours
@@ -56,7 +56,7 @@ def traverse_backwards(element_id, element_graph):
     return path
 
 
-def build_nested_list(node_map, start_node, node_to_element_map, visited):
+def _traverse_forward_path(node_map, start_node, node_to_element_map, visited):
     def traverse(node, is_branch=False, path=None):
         if path is None:
             path = []
@@ -90,6 +90,7 @@ def build_nested_list(node_map, start_node, node_to_element_map, visited):
 
 def _build_maps(elements):
     node_map = {}
+    reverse_node_map = {}
     element_map = {}
     for element in elements:
         start= element['start_node']
@@ -102,8 +103,11 @@ def _build_maps(elements):
         if start not in node_map:
             node_map[start] = []
         node_map[start].append(end)
+        if end not in reverse_node_map:
+            reverse_node_map[end] = []
+        reverse_node_map[end].append(start)
 
-    return node_map, element_map
+    return node_map, reverse_node_map, element_map
 
 
 def find_maximal_non_branching_paths(graph):
@@ -155,10 +159,96 @@ def find_maximal_non_branching_paths(graph):
     return paths, branching_nodes, is_tree
 
 
+def _flatten_to_set(nested_list):
+    flat_set = set()
+
+    def flatten(item):
+        if isinstance(item, list):
+            for sub_item in item:
+                flatten(sub_item)
+        else:
+            flat_set.add(item)
+
+    flatten(nested_list)
+    return flat_set
+
+
+def _find_edges_ii(forward_map, reverse_map):
+    edges = []
+
+    def is_junction(node):
+        return len(forward_map.get(node, [])) > 1 or len(reverse_map.get(node, [])) > 1
+
+    def traverse_edge(start_node, seeded_next_node):
+        edge = [start_node]
+        current_node = start_node
+        while len(forward_map.get(current_node, [])) > 0:
+            next_node = forward_map[current_node][0] if seeded_next_node is None else seeded_next_node
+            seeded_next_node = None
+            edge.append(next_node)
+            if is_junction(next_node):
+                break
+            current_node = next_node
+        edges.append(edge)
+
+    # Find start points (nodes with no incoming edges or junctions).
+    start_points = set(forward_map.keys()) - set(reverse_map.keys())
+    junctions = {node for node in forward_map if is_junction(node)}
+
+    for start_point in start_points.union(junctions):
+        for out_node in forward_map[start_point]:
+            traverse_edge(start_point, out_node)
+
+    return tuple(edges)
+
+
+def _find_edges_i(forward_map, reverse_map):
+    edges = []
+    visited = set()
+
+    def traverse(node, path):
+        visited.add(node)
+        path.append(node)
+
+        # Check if the current node is a junction
+        is_junction = len(forward_map.get(node, [])) > 1 or len(reverse_map.get(node, [])) > 1
+
+        if is_junction or not forward_map.get(node):
+            finish_node = path[-1]
+            edges.append(path[:])
+            path.clear()
+            path.append(finish_node)
+
+        for next_node in forward_map.get(node, []):
+            if next_node not in visited:
+                traverse(next_node, path)
+
+        if path:
+            # finish_node = path[-1]
+            edges.append(path[:])
+            path.clear()
+            # path.append(finish_node)
+
+    for start_node in forward_map.keys():
+        if start_node not in visited:
+            traverse(start_node, [])
+
+    return tuple(edges)
+
+
 def determine_forest(elements):
     node_graph = build_node_graph(elements)
     element_graph = build_element_graph(elements, node_graph)
-    node_map, node_to_element_map = _build_maps(elements)
+    node_map, reverse_node_map, node_to_element_map = _build_maps(elements)
+
+    # print('================')
+    # print(elements)
+    # print(node_graph)
+    # print(element_graph)
+    print('----------------')
+    print('nm:', node_map)
+    print('rnm:', reverse_node_map)
+    # print('nem:', node_to_element_map)
 
     all_el_ids = set(element_graph.keys())
     visited = set()
@@ -179,7 +269,16 @@ def determine_forest(elements):
 
         visited_before = visited.copy()
 
-        forward_path = build_nested_list(node_map, start_node, node_to_element_map, visited)
+        forward_path = _traverse_forward_path(node_map, start_node, node_to_element_map, visited)
+        path_nodes = _flatten_to_set(forward_path)
+        if _is_vessel_path(path_nodes, reverse_node_map):
+            filtered_node_map = {}
+            for node_id in path_nodes:
+                if node_id in node_map:
+                    filtered_node_map[node_id] = node_map[node_id]
+            forward_path = _find_edges_ii(filtered_node_map, reverse_node_map)
+            print('reform forward path to vessel edges.')
+            print(forward_path)
 
         used_elements = visited.difference(visited_before)
 
@@ -188,6 +287,14 @@ def determine_forest(elements):
         remainder = all_el_ids.difference(visited)
 
     return forest, forest_members
+
+
+def _is_vessel_path(path_nodes, reverse_node_map):
+    for node_id in path_nodes:
+        if len(reverse_node_map.get(node_id, [])) > 1:
+            return True
+
+    return False
 
 
 def is_list_of_integers(lst):
@@ -253,16 +360,20 @@ def build_subtrees(branch, parent=None, node_to_subtree=None):
 
 
 def classify_forest(forest, plant_path_info, nodes, node_id_map, fields, group_fields):
-    classification = {'contours': [], 'trees': []}
+    classification = {'contours': [], 'trees': [], 'vessels': []}
     grouped_nodes = get_group_nodes(group_fields)
     nodes_by_group = {tuple(v): k for k, v in grouped_nodes.items()}
     group_implied_structure = [set(v) for v in nodes_by_group.keys()]
 
+    # print('forest')
+    # print(forest)
     for index, plant in enumerate(forest):
+        is_vessel = isinstance(plant, tuple)
         list_of_ints = is_list_of_integers(plant)
-        is_contour = True if list_of_ints and not has_subgroup_of(grouped_nodes, set(plant)) else False
+        is_contour = True if not is_vessel and list_of_ints and not has_subgroup_of(grouped_nodes, set(plant)) else False
+        is_tree = not is_vessel and not is_contour
 
-        if not is_contour:
+        if is_tree:
             for sequence in group_implied_structure:
                 plant = nest_sequence(plant, sequence)
 
@@ -272,8 +383,8 @@ def classify_forest(forest, plant_path_info, nodes, node_id_map, fields, group_f
 
         points, point_identifiers = convert_plant_to_points(plant, nodes, node_id_map, fields)
 
-        start_node = get_node(nodes, node_id_map,  plant[0])
-
+        start_node_id = plant[0][0] if is_vessel else plant[0]
+        start_node = get_node(nodes, node_id_map, start_node_id)
         matching_global_labels = _match_group(point_identifiers, grouped_nodes)
 
         colour = get_colour(start_node, fields)
@@ -284,11 +395,11 @@ def classify_forest(forest, plant_path_info, nodes, node_id_map, fields, group_f
         if resolution is not None:
             metadata['global']['resolution'] = resolution
 
-        if not is_contour:
+        if is_tree:
             unique_paths = get_unique_list_paths(plant)
             metadata['indexed'] = {u: _match_group(set(get_identifiers_from_path(u, plant)), grouped_nodes) for u in unique_paths}
 
-        category = 'contours' if is_contour else 'trees'
+        category = 'contours' if is_contour else 'trees' if is_tree else 'vessels'
         classification[category].append({"points": points, "metadata": metadata})
 
     return classification
