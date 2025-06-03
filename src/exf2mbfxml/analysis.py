@@ -110,55 +110,6 @@ def _build_maps(elements):
     return node_map, reverse_node_map, element_map
 
 
-def find_maximal_non_branching_paths(graph):
-    outgoing_edges = defaultdict(list)
-    incoming_edges = defaultdict(list)
-    all_nodes = set()
-
-    for segment in graph:
-        start = segment['start_node']
-        end = segment['end_node']
-        outgoing_edges[start].append(end)
-        incoming_edges[end].append(start)
-        all_nodes.add(start)
-        all_nodes.add(end)
-
-    paths = []
-    visited = set()
-    branching_nodes = {}
-
-    def dfs(node_local, path):
-        visited.add(node_local)
-        path.append(node_local)
-        if len(outgoing_edges[node_local]) != 1:
-            paths.append(path[:])
-            return
-        for neighbor in outgoing_edges[node_local]:
-            if neighbor not in visited:
-                dfs(neighbor, path)
-        # path.pop()
-
-    nodes = list(outgoing_edges.keys())
-    while len(nodes):
-        node = nodes.pop(0)
-        if node not in visited:
-            dfs(node, [])
-
-    terminal_nodes = all_nodes.difference(visited)
-    for node in terminal_nodes:
-        paths.append([node])
-
-    is_tree = True
-    for node in all_nodes:
-        if len(outgoing_edges[node]) > 1:
-            branching_nodes[node] = outgoing_edges[node]
-        if len(incoming_edges[node]) > 1:
-            is_tree = False
-            branching_nodes[node] = list(set(branching_nodes.get(node, []) + incoming_edges[node]))
-
-    return paths, branching_nodes, is_tree
-
-
 def _flatten_to_set(nested_list):
     flat_set = set()
 
@@ -173,7 +124,7 @@ def _flatten_to_set(nested_list):
     return flat_set
 
 
-def _find_edges_ii(forward_map, reverse_map):
+def _find_edges(forward_map, reverse_map):
     edges = []
 
     def is_junction(node):
@@ -202,53 +153,10 @@ def _find_edges_ii(forward_map, reverse_map):
     return tuple(edges)
 
 
-def _find_edges_i(forward_map, reverse_map):
-    edges = []
-    visited = set()
-
-    def traverse(node, path):
-        visited.add(node)
-        path.append(node)
-
-        # Check if the current node is a junction
-        is_junction = len(forward_map.get(node, [])) > 1 or len(reverse_map.get(node, [])) > 1
-
-        if is_junction or not forward_map.get(node):
-            finish_node = path[-1]
-            edges.append(path[:])
-            path.clear()
-            path.append(finish_node)
-
-        for next_node in forward_map.get(node, []):
-            if next_node not in visited:
-                traverse(next_node, path)
-
-        if path:
-            # finish_node = path[-1]
-            edges.append(path[:])
-            path.clear()
-            # path.append(finish_node)
-
-    for start_node in forward_map.keys():
-        if start_node not in visited:
-            traverse(start_node, [])
-
-    return tuple(edges)
-
-
 def determine_forest(elements):
     node_graph = build_node_graph(elements)
     element_graph = build_element_graph(elements, node_graph)
     node_map, reverse_node_map, node_to_element_map = _build_maps(elements)
-
-    # print('================')
-    # print(elements)
-    # print(node_graph)
-    # print(element_graph)
-    print('----------------')
-    print('nm:', node_map)
-    print('rnm:', reverse_node_map)
-    # print('nem:', node_to_element_map)
 
     all_el_ids = set(element_graph.keys())
     visited = set()
@@ -276,9 +184,7 @@ def determine_forest(elements):
             for node_id in path_nodes:
                 if node_id in node_map:
                     filtered_node_map[node_id] = node_map[node_id]
-            forward_path = _find_edges_ii(filtered_node_map, reverse_node_map)
-            print('reform forward path to vessel edges.')
-            print(forward_path)
+            forward_path = _find_edges(filtered_node_map, reverse_node_map)
 
         used_elements = visited.difference(visited_before)
 
@@ -286,7 +192,7 @@ def determine_forest(elements):
         forest_members.append(used_elements)
         remainder = all_el_ids.difference(visited)
 
-    return forest, forest_members
+    return forest
 
 
 def _is_vessel_path(path_nodes, reverse_node_map):
@@ -339,34 +245,12 @@ def _match_group(target_set, labelled_sets):
     return matched_labels
 
 
-def build_subtrees(branch, parent=None, node_to_subtree=None):
-    if node_to_subtree is None:
-        node_to_subtree = {}
-
-    if isinstance(branch, list):
-        for b in branch:
-            build_subtrees(b, parent, node_to_subtree)
-    else:
-        # Leaf node
-        if branch not in node_to_subtree:
-            node_to_subtree[branch] = set()
-        node_to_subtree[branch].add(branch)
-        if parent is not None:
-            if parent not in node_to_subtree:
-                node_to_subtree[parent] = set()
-            node_to_subtree[parent].update(node_to_subtree[branch])
-
-    return node_to_subtree
-
-
-def classify_forest(forest, plant_path_info, nodes, node_id_map, fields, group_fields):
+def classify_forest(forest, nodes, node_id_map, fields, group_fields):
     classification = {'contours': [], 'trees': [], 'vessels': []}
     grouped_nodes = get_group_nodes(group_fields)
     nodes_by_group = {tuple(v): k for k, v in grouped_nodes.items()}
     group_implied_structure = [set(v) for v in nodes_by_group.keys()]
 
-    # print('forest')
-    # print(forest)
     for index, plant in enumerate(forest):
         is_vessel = isinstance(plant, tuple)
         list_of_ints = is_list_of_integers(plant)

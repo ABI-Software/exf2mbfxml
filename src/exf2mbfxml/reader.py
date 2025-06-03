@@ -4,7 +4,7 @@ from cmlibs.utils.zinc.field import field_is_managed_coordinates
 from cmlibs.zinc.context import Context
 from cmlibs.zinc.result import RESULT_OK
 
-from exf2mbfxml.analysis import determine_forest, classify_forest, find_maximal_non_branching_paths
+from exf2mbfxml.analysis import determine_forest, classify_forest
 from exf2mbfxml.exceptions import EXFFile
 
 
@@ -107,14 +107,9 @@ def extract_mesh_info(region):
             element = element_iterator.next()
             index += 1
 
-        forest, forest_members = determine_forest(analysis_elements)
+        forest = determine_forest(analysis_elements)
 
-        plant_path_info = []
-        for members in forest_members:
-            subset = [el for el in analysis_elements if el['id'] in members]
-            plant_path_info.append(find_maximal_non_branching_paths(subset))
-
-        mesh_info = classify_forest(forest, plant_path_info, nodes, node_identifier_to_index_map, node_fields, group_fields)
+        mesh_info = classify_forest(forest, nodes, node_identifier_to_index_map, node_fields, group_fields)
 
     return mesh_info
 

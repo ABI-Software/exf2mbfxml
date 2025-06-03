@@ -31,7 +31,6 @@ def _write_contour(contour, parent_element):
     # Create the contour element
     contour_element = ET.SubElement(parent_element, "contour", attributes)
 
-    print(metadata)
     # Add properties
     global_uid = current_metadata.get('GUID', '')
     if global_uid:
@@ -114,6 +113,53 @@ def _write_tree(tree, parent_element):
     _write_branch(parent_element, "tree", attributes, points, [], indexed_labels)
 
 
+def _write_vessel(vessel, parent_element):
+    points = vessel.get("points", [])
+    metadata = vessel.get("metadata", [])
+    if not points:
+        return
+
+    top_level = parent_element.tag == 'mbf'
+
+    attributes = {'color': metadata['global'].get('colour', '#000000'), 'version': '4'}
+    global_labels = metadata['global'].get('labels', [])
+    if global_labels:
+        filtered = [s for s in global_labels if not _is_trace_association(s)]
+        for item in filtered:
+            attributes['class'] = item
+
+    vessel_element = ET.SubElement(parent_element, 'vessel', attrib=attributes)
+    nodes_element = ET.SubElement(vessel_element, "nodes")
+    edges_element = ET.SubElement(vessel_element, "edges")
+    edgelists_element = ET.SubElement(vessel_element, "edgelists")
+
+    node_id_map = {}
+    node_id_counter = 0
+    edge_id_counter = 0
+
+    def add_node(pt):
+        nonlocal node_id_counter
+        point_tuple = tuple(pt[:4])
+        if point_tuple not in node_id_map:
+            node = ET.SubElement(nodes_element, "node", id=str(node_id_counter))
+            ET.SubElement(node, "point", x=str(pt[0]), y=str(pt[1]), z=str(pt[2]), d=str(pt[3]))
+            node_id_map[point_tuple] = node_id_counter
+            node_id_counter += 1
+        return node_id_map[point_tuple]
+
+    for edge in points:
+        edge_element = ET.SubElement(edges_element, "edge", id=str(edge_id_counter))
+        for point in edge:
+            ET.SubElement(edge_element, "point", x=str(point[0]), y=str(point[1]), z=str(point[2]), d=str(point[3]))
+
+        source_node_id = add_node(edge[0])
+        target_node_id = add_node(edge[-1])
+
+        ET.SubElement(edgelists_element, "edgelist", id=str(edge_id_counter), edge=str(edge_id_counter), sourcenode=str(source_node_id), targetnode=str(target_node_id))
+
+        edge_id_counter += 1
+
+
 def write_mbfxml(output_mbf, data, options=None):
     # Create the root element
     root = ET.Element("mbf", version="4.0", xmlns="http://www.mbfbioscience.com/2007/neurolucida",
@@ -124,6 +170,9 @@ def write_mbfxml(output_mbf, data, options=None):
 
     for tree in data.get('trees', []):
         _write_tree(tree, root)
+
+    for vessel in data.get('vessels', []):
+        _write_vessel(vessel, root)
 
     # Create the XML tree and write to a file
     tree = ET.ElementTree(root)
