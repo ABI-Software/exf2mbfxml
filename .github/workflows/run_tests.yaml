@@ -1,0 +1,35 @@
+name: Test library
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-22.04
+    name: Run tests
+    steps:
+      - name: Clone source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - name: Install dependencies
+        run: |
+          sudo apt install libopengl0 libglu1-mesa -y
+      - name: Install library
+        shell: bash
+        run: |
+          #pip install https://github.com/cmlibs/zinc/releases/download/v4.2.0/cmlibs.zinc-4.2.0-cp311-cp311-linux_x86_64.whl
+          pip install .[test]
+      - name: Run tests
+        shell: bash
+        run: |
+          python -m unittest discover -s tests/
+      - name: Report coverage
+        shell: bash
+        run: |
+          coverage run --source=exf2mbfxml -m unittest discover -s tests
+          coverage report
