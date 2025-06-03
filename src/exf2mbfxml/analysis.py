@@ -3,12 +3,11 @@ from exf2mbfxml.zinc import get_point, get_colour, get_resolution, get_group_nod
 
 from typing import Union, List
 from collections import defaultdict
-# from pprint import pprint
 
 Branch = Union[int, List["Branch"]]
 
 
-def build_node_graph(elements):
+def _build_node_graph(elements):
     graph = defaultdict(lambda: {"start": [], "end": []})
 
     for element in elements:
@@ -20,17 +19,17 @@ def build_node_graph(elements):
     return graph
 
 
-def find_neighbours(element, node_graph, buckets):
+def _find_neighbours(element, node_graph, buckets):
     node_id = element[buckets[0]]
     return node_graph[node_id][buckets[1]]
 
 
-def build_element_graph(elements, node_graph):
+def _build_element_graph(elements, node_graph):
     element_graph = {}
 
     for element in elements:
-        forward_neighbours = find_neighbours(element, node_graph, ["end_node", "start"])
-        backward_neighbours = find_neighbours(element, node_graph, ["start_node", "end"])
+        forward_neighbours = _find_neighbours(element, node_graph, ["end_node", "start"])
+        backward_neighbours = _find_neighbours(element, node_graph, ["start_node", "end"])
         element_graph[element["id"]] = {
             "forward": forward_neighbours,
             "backward": backward_neighbours
@@ -39,7 +38,7 @@ def build_element_graph(elements, node_graph):
     return element_graph
 
 
-def traverse_backwards(element_id, element_graph):
+def _traverse_backwards(element_id, element_graph):
     path = [element_id]
     current_element_id = element_id
 
@@ -154,12 +153,14 @@ def _find_edges(forward_map, reverse_map):
 
 
 def determine_forest(elements):
-    node_graph = build_node_graph(elements)
-    element_graph = build_element_graph(elements, node_graph)
+    node_graph = _build_node_graph(elements)
+    element_graph = _build_element_graph(elements, node_graph)
     node_map, reverse_node_map, node_to_element_map = _build_maps(elements)
 
     all_el_ids = set(element_graph.keys())
     visited = set()
+
+    element_lookup = {el['id']: el for el in elements}
 
     forest = []
     forest_members = []
@@ -169,11 +170,12 @@ def determine_forest(elements):
         random_element_id = remainder.pop()
 
         # Traverse backwards.
-        backward_path = traverse_backwards(random_element_id, element_graph)
+        backward_path = _traverse_backwards(random_element_id, element_graph)
 
         # Perform depth-first traversal from the starting element.
         starting_element_id = backward_path[-1]
-        start_node = next(item['start_node'] for item in elements if item['id'] == starting_element_id)
+        starting_element = element_lookup[starting_element_id]
+        start_node = starting_element['start_node']
 
         visited_before = visited.copy()
 
@@ -203,27 +205,27 @@ def _is_vessel_path(path_nodes, reverse_node_map):
     return False
 
 
-def is_list_of_integers(lst):
+def _is_list_of_integers(lst):
     return all(isinstance(item, int) for item in lst)
 
 
-def has_subgroup_of(groups, outer_set):
+def _has_subgroup_of(groups, outer_set):
     return any(val < outer_set for val in groups.values())
 
 
-def get_node(nodes, node_id_map, node_id):
+def _get_node(nodes, node_id_map, node_id):
     return nodes[node_id_map[node_id]]
 
 
-def convert_plant_to_points(plant, nodes, node_id_map, fields):
+def _convert_plant_to_points(plant, nodes, node_id_map, fields):
     points = [None] * len(plant)
     point_identifiers = set()
     for index, seg in enumerate(plant):
         if isinstance(seg, list):
-            end_points, end_point_identifiers = convert_plant_to_points(seg, nodes, node_id_map, fields)
+            end_points, end_point_identifiers = _convert_plant_to_points(seg, nodes, node_id_map, fields)
             point_identifiers.update(end_point_identifiers)
         else:
-            end_node = get_node(nodes, node_id_map, seg)
+            end_node = _get_node(nodes, node_id_map, seg)
             end_points = get_point(end_node, fields)
             point_identifiers.add(seg)
 
@@ -235,6 +237,7 @@ def convert_plant_to_points(plant, nodes, node_id_map, fields):
 def _match_group(target_set, labelled_sets):
     """
     Find and remove the matching labels.
+    Matched labels are removed from the labelled sets input dictionary.
     """
     matched_labels = []
     for label, id_set in list(labelled_sets.items()):
@@ -253,8 +256,8 @@ def classify_forest(forest, nodes, node_id_map, fields, group_fields):
 
     for index, plant in enumerate(forest):
         is_vessel = isinstance(plant, tuple)
-        list_of_ints = is_list_of_integers(plant)
-        is_contour = True if not is_vessel and list_of_ints and not has_subgroup_of(grouped_nodes, set(plant)) else False
+        list_of_ints = _is_list_of_integers(plant)
+        is_contour = True if not is_vessel and list_of_ints and not _has_subgroup_of(grouped_nodes, set(plant)) else False
         is_tree = not is_vessel and not is_contour
 
         if is_tree:
@@ -265,10 +268,10 @@ def classify_forest(forest, nodes, node_id_map, fields, group_fields):
         if closed_contour:
             plant.pop()
 
-        points, point_identifiers = convert_plant_to_points(plant, nodes, node_id_map, fields)
+        points, point_identifiers = _convert_plant_to_points(plant, nodes, node_id_map, fields)
 
         start_node_id = plant[0][0] if is_vessel else plant[0]
-        start_node = get_node(nodes, node_id_map, start_node_id)
+        start_node = _get_node(nodes, node_id_map, start_node_id)
         matching_global_labels = _match_group(point_identifiers, grouped_nodes)
 
         colour = get_colour(start_node, fields)
