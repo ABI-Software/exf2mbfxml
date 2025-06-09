@@ -17,11 +17,11 @@ Usage
 
 ::
 
-  exf2mbfxmlexconverter /path/to/input.exf
+  exf2mbfxmlconverter /path/to/input.exf
 
 For more information use the help::
 
-  mbfxml2exconverter --help
+  exf2mbfxmlconverter --help
 
 Developing
 ----------
