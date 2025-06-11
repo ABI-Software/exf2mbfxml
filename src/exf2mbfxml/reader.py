@@ -4,7 +4,7 @@ from cmlibs.utils.zinc.field import field_is_managed_coordinates
 from cmlibs.zinc.context import Context
 from cmlibs.zinc.result import RESULT_OK
 
-from exf2mbfxml.analysis import determine_forest, classify_forest
+from exf2mbfxml.analysis import determine_forest, classify_forest, read_markers
 from exf2mbfxml.exceptions import EXFFile
 
 
@@ -68,7 +68,7 @@ def _find_available_fields(field_module):
 
 
 def extract_mesh_info(region):
-    mesh_info = None
+    mesh_info = {}
     field_module = region.getFieldmodule()
     mesh_1d = field_module.findMeshByDimension(1)
     analysis_elements = [None] * mesh_1d.getSize()
@@ -79,6 +79,7 @@ def extract_mesh_info(region):
     coordinates_field.setName("coordinates")
     available_fields, group_fields = _find_available_fields(field_module)
     available_fields.insert(0, coordinates_field)
+    data_fields = {available_field.getName(): available_field for available_field in available_fields}
 
     # _print_check_on_field_names(available_fields)
 
@@ -87,7 +88,6 @@ def extract_mesh_info(region):
     local_nodes_count = eft.getNumberOfLocalNodes()
     if local_nodes_count == 2:
         element_identifier_to_index_map = {}
-        node_fields = {available_field.getName(): available_field for available_field in available_fields}
         nodes = []
         node_identifier_to_index_map = {}
         while element.isValid():
@@ -109,8 +109,9 @@ def extract_mesh_info(region):
 
         forest = determine_forest(analysis_elements)
 
-        mesh_info = classify_forest(forest, nodes, node_identifier_to_index_map, node_fields, group_fields)
+        mesh_info = classify_forest(forest, nodes, node_identifier_to_index_map, data_fields, group_fields)
 
+    mesh_info['markers'] = read_markers(region, data_fields)
     return mesh_info
 
 

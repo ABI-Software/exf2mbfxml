@@ -1,5 +1,5 @@
 from exf2mbfxml.utilities import nest_sequence, get_unique_list_paths, get_identifiers_from_path
-from exf2mbfxml.zinc import get_point, get_colour, get_resolution, get_group_nodes
+from exf2mbfxml.zinc import get_point, get_colour, get_resolution, get_group_nodes, get_markers, get_string
 
 from typing import Union, List
 from collections import defaultdict
@@ -283,3 +283,9 @@ def classify_forest(forest, nodes, node_id_map, fields, group_fields):
         classification[category].append({"points": points, "metadata": metadata})
 
     return classification
+
+
+def read_markers(region, fields):
+    markers = []
+    datapoints = get_markers(region)
+    return [{"point": get_point(datapoint, fields), "metadata": {"name": get_string(datapoint, "marker_name"), "colour": get_colour(datapoint, fields)}} for datapoint in datapoints]

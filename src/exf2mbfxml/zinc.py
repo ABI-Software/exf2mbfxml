@@ -25,6 +25,29 @@ def get_point(node, fields):
     return values
 
 
+def get_string(node, field_name):
+    nodeset = node.getNodeset()
+    field_module = nodeset.getFieldmodule()
+    name_field = field_module.findFieldByName(field_name)
+    return _evaluate_field(node, name_field, Field.VALUE_TYPE_STRING, "")
+
+
+def get_markers(region):
+    markers = []
+    field_module = region.getFieldmodule()
+    marker_group = field_module.findFieldByName("marker").castGroup()
+    if marker_group.isValid():
+        datapoints = field_module.findNodesetByFieldDomainType(Field.DOMAIN_TYPE_DATAPOINTS)
+        marker_nodeset_group = marker_group.getNodesetGroup(datapoints)
+        datapoint_iter = marker_nodeset_group.createNodeiterator()
+        datapoint = datapoint_iter.next()
+        while datapoint.isValid():
+            markers.append(datapoint)
+            datapoint = datapoint_iter.next()
+
+    return markers
+
+
 def _evaluate_field(node, field, value_type, default_value=None):
     value = default_value
     if field is not None:

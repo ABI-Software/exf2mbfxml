@@ -142,7 +142,8 @@ def _write_vessel(vessel, parent_element):
         point_tuple = tuple(pt[:4])
         if point_tuple not in node_id_map:
             node = ET.SubElement(nodes_element, "node", id=str(node_id_counter))
-            ET.SubElement(node, "point", x=str(pt[0]), y=str(pt[1]), z=str(pt[2]), d=str(pt[3]))
+            _write_point(node, pt)
+            # ET.SubElement(node, "point", x=str(pt[0]), y=str(pt[1]), z=str(pt[2]), d=str(pt[3]))
             node_id_map[point_tuple] = node_id_counter
             node_id_counter += 1
         return node_id_map[point_tuple]
@@ -150,7 +151,8 @@ def _write_vessel(vessel, parent_element):
     for edge in points:
         edge_element = ET.SubElement(edges_element, "edge", id=str(edge_id_counter))
         for point in edge:
-            ET.SubElement(edge_element, "point", x=str(point[0]), y=str(point[1]), z=str(point[2]), d=str(point[3]))
+            _write_point(edge_element, point)
+            # ET.SubElement(edge_element, "point", x=str(point[0]), y=str(point[1]), z=str(point[2]), d=str(point[3]))
 
         source_node_id = add_node(edge[0])
         target_node_id = add_node(edge[-1])
@@ -160,10 +162,24 @@ def _write_vessel(vessel, parent_element):
         edge_id_counter += 1
 
 
+def _write_marker(marker, root):
+    point = marker.get("point", [])
+    metadata = marker.get("metadata", [])
+    if not point:
+        return
+
+    attributes = {'color': metadata.get('colour', '#000000'), 'name': metadata.get('name', '')}
+    marker_element = ET.SubElement(root, 'marker', attrib=attributes)
+    _write_point(marker_element, point)
+
+
 def write_mbfxml(output_mbf, data, options=None):
     # Create the root element
     root = ET.Element("mbf", version="4.0", xmlns="http://www.mbfbioscience.com/2007/neurolucida",
                       appname="Exf2MBFXML", appversion=package_version)
+
+    for marker in data.get('markers', []):
+        _write_marker(marker, root)
 
     for contour in data.get('contours', []):
         _write_contour(contour, root)

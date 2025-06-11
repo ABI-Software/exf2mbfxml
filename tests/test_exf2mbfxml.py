@@ -126,5 +126,35 @@ class EXFVesselTestCase(unittest.TestCase):
             self.assertEqual(line_count, len(content))
 
 
+class EXFMarkerTestCase(unittest.TestCase):
+
+    def test_bad_input(self):
+        vessel_exf_file = _resource_path("simple_vessel_structure.exf")
+        content = read_exf(vessel_exf_file)
+        marker_count = 0
+        self.assertEqual(marker_count, len(content['markers']))
+
+    def test_markers(self):
+        marker_exf_file = _resource_path("contour_with_marker_names.exf")
+        content = read_exf(marker_exf_file)
+        marker_count = 11
+        self.assertEqual(marker_count, len(content['markers']))
+        output_xml_file = f"{marker_exf_file}.xml"
+        write_mbfxml(output_xml_file, content)
+        self.assertTrue(os.path.isfile(output_xml_file))
+
+
+class RealWorldTestCase(unittest.TestCase):
+
+    @unittest.skip
+    def test_japanese_vagus(self):
+        basic_tree_exf_file = _resource_path("japanese_vagus.exf")
+        content = read_exf(basic_tree_exf_file)
+        self.assertIsNotNone(content)
+        output_xml_file = f"{basic_tree_exf_file}.xml"
+        write_mbfxml(output_xml_file, content)
+        self.assertTrue(os.path.isfile(output_xml_file))
+
+
 if __name__ == "__main__":
     unittest.main()
