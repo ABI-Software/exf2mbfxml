@@ -3,6 +3,7 @@ import unittest
 
 from unittest.mock import patch
 
+from exf2mbfxml.analysis import is_suitable_mesh
 from exf2mbfxml.app import main
 from exf2mbfxml.exceptions import EXFFile
 from exf2mbfxml.reader import read_exf
@@ -113,6 +114,10 @@ class EXFVesselTestCase(unittest.TestCase):
 
         os.remove(output_xml_file)
 
+    def test_is_suitable(self):
+        basic_tree_exf_file = _resource_path("simple_vessel_structure.exf")
+        self.assertTrue(is_suitable_mesh(basic_tree_exf_file))
+
     def test_simple_vessel(self):
         basic_tree_exf_file = _resource_path("simple_vessel_structure.exf")
         content = read_exf(basic_tree_exf_file)
@@ -146,12 +151,15 @@ class EXFMarkerTestCase(unittest.TestCase):
 
 class RealWorldTestCase(unittest.TestCase):
 
-    @unittest.skip
-    def test_japanese_vagus(self):
+    def test_japanese_vagus_valid(self):
         basic_tree_exf_file = _resource_path("japanese_vagus.exf")
-        content = read_exf(basic_tree_exf_file)
+        self.assertTrue(is_suitable_mesh(basic_tree_exf_file))
+
+    def test_japanese_vagus(self):
+        japanese_exf_file = _resource_path("japanese_vagus.exf")
+        content = read_exf(japanese_exf_file)
         self.assertIsNotNone(content)
-        output_xml_file = f"{basic_tree_exf_file}.xml"
+        output_xml_file = f"{japanese_exf_file}.xml"
         write_mbfxml(output_xml_file, content)
         self.assertTrue(os.path.isfile(output_xml_file))
 

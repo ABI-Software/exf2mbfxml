@@ -1,4 +1,6 @@
-from exf2mbfxml.utilities import nest_sequence, get_unique_list_paths, get_identifiers_from_path
+from cmlibs.zinc.context import Context
+
+from exf2mbfxml.utilities import nest_sequence, get_unique_list_paths, get_identifiers_from_path, determine_fields
 from exf2mbfxml.zinc import get_point, get_colour, get_resolution, get_group_nodes, get_markers, get_string
 
 from typing import Union, List
@@ -245,7 +247,7 @@ def classify_forest(forest, nodes, node_id_map, fields, group_fields):
     classification = {'contours': [], 'trees': [], 'vessels': []}
     grouped_nodes = get_group_nodes(group_fields)
     nodes_by_group = {tuple(v): k for k, v in grouped_nodes.items()}
-    group_implied_structure = [set(v) for v in nodes_by_group.keys()]
+    group_implied_structure = [set(v) for v in nodes_by_group.keys() if v]
 
     for index, plant in enumerate(forest):
         is_vessel = isinstance(plant, tuple)
@@ -286,6 +288,41 @@ def classify_forest(forest, nodes, node_id_map, fields, group_fields):
 
 
 def read_markers(region, fields):
-    markers = []
     datapoints = get_markers(region)
     return [{"point": get_point(datapoint, fields), "metadata": {"name": get_string(datapoint, "marker_name"), "colour": get_colour(datapoint, fields)}} for datapoint in datapoints]
+
+
+def is_suitable_mesh(input_argument):
+    """
+    Test if the given mesh is suitable for extracting into MBF XML format.
+    The input can either be a string specifying an EXF file location, or a Zinc Region.
+    """
+    if isinstance(input_argument, str):
+        context = Context("valid")
+        region = context.getDefaultRegion()
+        region.readFile(input_argument)
+    else:
+        region = input_argument
+
+    field_module = region.getFieldmodule()
+    coordinates_field, available_fields, group_fields = determine_fields(field_module)
+
+    mesh_1d = field_module.findMeshByDimension(1)
+
+    element_iterator = mesh_1d.createElementiterator()
+    element = element_iterator.next()
+    while element.isValid():
+        eft = element.getElementfieldtemplate(coordinates_field, -1)
+        local_nodes_count = eft.getNumberOfLocalNodes()
+        if local_nodes_count != 2:
+            return False
+
+        for node_index in [1, 2]:
+            node = element.getNode(eft, node_index)
+            node_identifier = node.getIdentifier()
+            if node_identifier == -1:
+                return False
+
+        element = element_iterator.next()
+
+    return True

@@ -1,5 +1,7 @@
 import xml.etree.ElementTree as ET
 
+from cmlibs.utils.zinc.field import field_is_managed_coordinates
+
 
 def rgb_to_hex(rgb_value):
     """
@@ -147,3 +149,57 @@ def is_valid_xml(xml_string):
         return True
     except ET.ParseError:
         return False
+
+
+def find_likely_coordinate_field(field_module):
+    field_iterator = field_module.createFielditerator()
+    field = field_iterator.next()
+    likely_coordinates_field = None
+    candidate_coordinate_field = None
+    while field.isValid() and likely_coordinates_field is None:
+        if field_is_managed_coordinates(field):
+            candidate_coordinate_field = field
+
+        if candidate_coordinate_field is not None and candidate_coordinate_field.getName() == 'coordinates':
+            likely_coordinates_field = candidate_coordinate_field
+
+        field = field_iterator.next()
+
+    return likely_coordinates_field if likely_coordinates_field is not None else candidate_coordinate_field
+
+
+def _is_user_field(field):
+    """
+    Determine if a field is a user field or internal field, return True if the
+    given field is a user field and False if it isn't.
+    """
+    INTERNAL_FIELD_NAMES = ['cmiss_number', 'xi', 'coordinates']
+    return field.getName() not in INTERNAL_FIELD_NAMES
+
+
+def find_available_fields(field_module):
+    """
+    Excludes the expected 'coordinates' field by default.
+    """
+    field_iterator = field_module.createFielditerator()
+    field = field_iterator.next()
+    available_fields = []
+    group_fields = []
+    while field.isValid():
+        group_field = field.castGroup()
+        if _is_user_field(field) and not group_field.isValid():
+            available_fields.append(field)
+        elif group_field.isValid():
+            group_fields.append(group_field)
+
+        field = field_iterator.next()
+
+    return available_fields, group_fields
+
+
+def determine_fields(field_module):
+    coordinates_field = find_likely_coordinate_field(field_module)
+    coordinates_field.setName("coordinates")
+    available_fields, group_fields = find_available_fields(field_module)
+    available_fields.insert(0, coordinates_field)
+    return coordinates_field, available_fields, group_fields
