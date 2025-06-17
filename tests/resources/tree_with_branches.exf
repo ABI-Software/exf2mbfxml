@@ -265,14 +265,14 @@ Element: 17
 Group name: Bob
 !#nodeset nodes
 Node group:
-13
+8,13
 !#mesh mesh1d, dimension=1, nodeset=nodes
 Element group:
 12..13
 Group name: Dave
 !#nodeset nodes
 Node group:
-9
+8..9
 !#mesh mesh1d, dimension=1, nodeset=nodes
 Element group:
 8..10
@@ -300,70 +300,70 @@ Element group:
 Group name: http://uri.interlex.org/base/ilx_0777078
 !#nodeset nodes
 Node group:
-3
+2..3
 !#mesh mesh1d, dimension=1, nodeset=nodes
 Element group:
 2..3
 Group name: http://uri.interlex.org/base/ilx_0777079
 !#nodeset nodes
 Node group:
-4
+3..4
 !#mesh mesh1d, dimension=1, nodeset=nodes
 Element group:
 3..4
 Group name: http://uri.interlex.org/base/ilx_0777080
 !#nodeset nodes
 Node group:
-5..8
+4..8
 !#mesh mesh1d, dimension=1, nodeset=nodes
 Element group:
 4..8,12
 Group name: http://uri.interlex.org/base/ilx_0777081
 !#nodeset nodes
 Node group:
-9
+8..9
 !#mesh mesh1d, dimension=1, nodeset=nodes
 Element group:
 8..10
 Group name: http://uri.interlex.org/base/ilx_0777082
 !#nodeset nodes
 Node group:
-10
+9..10
 !#mesh mesh1d, dimension=1, nodeset=nodes
 Element group:
 9
 Group name: http://uri.interlex.org/base/ilx_0777083
 !#nodeset nodes
 Node group:
-11..12
+9,11..12
 !#mesh mesh1d, dimension=1, nodeset=nodes
 Element group:
 10..11
 Group name: http://uri.interlex.org/base/ilx_0777084
 !#nodeset nodes
 Node group:
-13
+8,13
 !#mesh mesh1d, dimension=1, nodeset=nodes
 Element group:
 12..13
 Group name: http://uri.interlex.org/base/ilx_0777085
 !#nodeset nodes
 Node group:
-14..16
+13..16
 !#mesh mesh1d, dimension=1, nodeset=nodes
 Element group:
 13..16
 Group name: http://uri.interlex.org/base/ilx_0777086
 !#nodeset nodes
 Node group:
-17
+16..17
 !#mesh mesh1d, dimension=1, nodeset=nodes
 Element group:
 16..17
 Group name: http://uri.interlex.org/base/ilx_0777087
 !#nodeset nodes
 Node group:
-18
+17..18
 !#mesh mesh1d, dimension=1, nodeset=nodes
 Element group:
 17

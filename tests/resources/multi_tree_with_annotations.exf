@@ -916,6 +916,13 @@ Element: 66
 Element: 67
  Nodes:
  71 70
+Group name: <property name="FillDensity"><n>0</n></property>
+!#nodeset nodes
+Node group:
+66..71
+!#mesh mesh1d, dimension=1, nodeset=nodes
+Element group:
+62..67
 Group name: Bounding Box
 !#nodeset nodes
 Node group:
@@ -930,6 +937,13 @@ Node group:
 !#mesh mesh1d, dimension=1, nodeset=nodes
 Element group:
 19..61
+Group name: Circular muscle layer of ascending colon II
+!#nodeset nodes
+Node group:
+30..38
+!#mesh mesh1d, dimension=1, nodeset=nodes
+Element group:
+28..35
 Group name: Dendrite
 !#nodeset nodes
 Node group:
@@ -968,7 +982,14 @@ Element group:
 Group name: http://purl.org/sig/ont/fma/fma15009
 !#nodeset nodes
 Node group:
-21..65
+21..31,39..65
 !#mesh mesh1d, dimension=1, nodeset=nodes
 Element group:
-19..61
+19..28,36..61
+Group name: http://purl.org/sig/ont/fma/fma15010
+!#nodeset nodes
+Node group:
+30..38
+!#mesh mesh1d, dimension=1, nodeset=nodes
+Element group:
+28..35

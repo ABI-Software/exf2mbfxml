@@ -78,6 +78,39 @@ def get_resolution(node, fields):
     return _evaluate_field(node, fields.get('resolution'), Field.VALUE_TYPE_REAL)
 
 
+def get_group_elements_and_nodes(group_fields):
+    grouped_elements = {}
+    field_module = None
+    mesh = None
+    node_set = None
+
+    for group_field in group_fields:
+        if field_module is None:
+            field_module = group_field.getFieldmodule()
+            node_set = field_module.findNodesetByFieldDomainType(Field.DOMAIN_TYPE_NODES)
+            mesh = field_module.findMeshByDimension(1)
+
+        node_set_group = group_field.getNodesetGroup(node_set)
+        node_iterator = node_set_group.createNodeiterator()
+        node_ids = set()
+        node = node_iterator.next()
+        while node.isValid():
+            node_ids.add(node.getIdentifier())
+            node = node_iterator.next()
+
+        mesh_group = group_field.getMeshGroup(mesh)
+        element_iterator = mesh_group.createElementiterator()
+        element_ids = set()
+        element = element_iterator.next()
+        while element.isValid():
+            element_ids.add(element.getIdentifier())
+            element = element_iterator.next()
+
+        grouped_elements[group_field.getName()] = {'nodes': node_ids, 'elements': element_ids}
+
+    return grouped_elements
+
+
 def get_group_nodes(group_fields):
     grouped_nodes = {}
     field_module = None

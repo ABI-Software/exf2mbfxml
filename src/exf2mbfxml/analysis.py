@@ -1,7 +1,7 @@
 from cmlibs.zinc.context import Context
 
 from exf2mbfxml.utilities import nest_sequence, get_unique_list_paths, get_identifiers_from_path, determine_fields
-from exf2mbfxml.zinc import get_point, get_colour, get_resolution, get_group_nodes, get_markers, get_string
+from exf2mbfxml.zinc import get_point, get_colour, get_resolution, get_markers, get_string
 
 from typing import Union, List
 from collections import defaultdict
@@ -147,7 +147,7 @@ def _find_edges(forward_map, reverse_map):
     return tuple(edges)
 
 
-def determine_forest(elements):
+def determine_forest(elements, grouped_identifiers):
     node_graph = _build_node_graph(elements)
     element_graph = _build_element_graph(elements, node_graph)
     node_map, reverse_node_map, node_to_element_map = _build_maps(elements)
@@ -157,8 +157,23 @@ def determine_forest(elements):
 
     element_lookup = {el['id']: el for el in elements}
 
+    group_start_nodes = set()
+    for group in grouped_identifiers.values():
+
+        element_ids = group.get('elements', [])
+        try:
+            element_id = element_ids.pop()
+            element_ids.add(element_id)
+        except KeyError:
+            continue
+
+        sub_element_graph = {e: {'backward': list(set(v['backward']).intersection(element_ids))} for e, v in element_graph.items() if e in element_ids}
+        backward_path = _traverse_backwards(element_id, sub_element_graph)
+        start_node = _find_node_at(backward_path, element_lookup, 'start')
+        end_node = _find_node_at(backward_path, element_lookup, 'end')
+        group_start_nodes.add((start_node, end_node))
+
     forest = []
-    forest_members = []
     remainder = all_el_ids.difference(visited)
     while remainder:
         # Select a random element.
@@ -168,11 +183,7 @@ def determine_forest(elements):
         backward_path = _traverse_backwards(random_element_id, element_graph)
 
         # Perform depth-first traversal from the starting element.
-        starting_element_id = backward_path[-1]
-        starting_element = element_lookup[starting_element_id]
-        start_node = starting_element['start_node']
-
-        visited_before = visited.copy()
+        start_node = _find_node_at(backward_path, element_lookup, 'start')
 
         forward_path = _traverse_forward_path(node_map, start_node, node_to_element_map, visited)
         path_nodes = _flatten_to_set(forward_path)
@@ -183,13 +194,16 @@ def determine_forest(elements):
                     filtered_node_map[node_id] = node_map[node_id]
             forward_path = _find_edges(filtered_node_map, reverse_node_map)
 
-        used_elements = visited.difference(visited_before)
-
         forest.append(forward_path)
-        forest_members.append(used_elements)
         remainder = all_el_ids.difference(visited)
 
-    return forest
+    return forest, group_start_nodes
+
+
+def _find_node_at(backward_path, element_lookup, location):
+    starting_element_id = backward_path[-1]
+    starting_element = element_lookup[starting_element_id]
+    return starting_element[f'{location}_node']
 
 
 def _is_vessel_path(path_nodes, reverse_node_map):
@@ -229,25 +243,52 @@ def _convert_plant_to_points(plant, nodes, node_id_map, fields):
     return points, point_identifiers
 
 
-def _match_group(target_set, labelled_sets):
+def _condition_equal(set_a, set_b):
+    return set_a == set_b
+
+
+def _condition_lt(set_a, set_b):
+    return set_a < set_b
+
+
+def _match_group(target_set, labelled_sets, destructively=True, condition_fcn=None):
     """
     Find and remove the matching labels.
     Matched labels are removed from the labelled sets input dictionary.
     """
+    if condition_fcn is None:
+        condition_fcn = _condition_equal
     matched_labels = []
     for label, id_set in list(labelled_sets.items()):
-        if id_set == target_set:
-            labelled_sets.pop(label)
+        if condition_fcn(target_set, id_set):
             matched_labels.append(label)
+            if destructively:
+                labelled_sets.pop(label)
 
     return matched_labels
 
 
-def classify_forest(forest, nodes, node_id_map, fields, group_fields):
+def _update_grouped_nodes(grouped_nodes, group_start_nodes, plant_set):
+    used_tuples = set()
+
+    modified = False
+    for start_node in group_start_nodes:
+        first, second = start_node
+        for key, node_set in grouped_nodes.items():
+            if first in node_set and second in node_set and node_set < plant_set:
+                node_set.discard(first)
+                used_tuples.add(start_node)
+                modified = True
+
+    # Remove used tuples from group_start_nodes
+    group_start_nodes -= used_tuples
+
+    return modified
+
+
+def classify_forest(forest, nodes, node_id_map, fields, grouped_nodes, group_start_nodes):
     classification = {'contours': [], 'trees': [], 'vessels': []}
-    grouped_nodes = get_group_nodes(group_fields)
-    nodes_by_group = {tuple(v): k for k, v in grouped_nodes.items()}
-    group_implied_structure = [set(v) for v in nodes_by_group.keys() if v]
+    group_implied_structure = _update_node_groups(grouped_nodes)
 
     for index, plant in enumerate(forest):
         is_vessel = isinstance(plant, tuple)
@@ -255,7 +296,22 @@ def classify_forest(forest, nodes, node_id_map, fields, group_fields):
         is_contour = True if not is_vessel and list_of_ints and not _has_subgroup_of(grouped_nodes, set(plant)) else False
         is_tree = not is_vessel and not is_contour
 
+        remove_start_nodes = None
+        for start_nodes in group_start_nodes:
+            if plant[0] == start_nodes[0] and len(plant) > 1 and plant[1] == start_nodes[1]:
+                remove_start_nodes = start_nodes
+                break
+
+        if remove_start_nodes is not None:
+            group_start_nodes.remove(remove_start_nodes)
+
         if is_tree:
+            if group_start_nodes:
+                plant_set = _flatten_to_set(plant)
+                modification_made = _update_grouped_nodes(grouped_nodes, group_start_nodes, plant_set)
+                if modification_made:
+                    group_implied_structure = _update_node_groups(grouped_nodes)
+
             for sequence in group_implied_structure:
                 plant = nest_sequence(plant, sequence)
 
@@ -268,6 +324,7 @@ def classify_forest(forest, nodes, node_id_map, fields, group_fields):
         start_node_id = plant[0][0] if is_vessel else plant[0]
         start_node = _get_node(nodes, node_id_map, start_node_id)
         matching_global_labels = _match_group(point_identifiers, grouped_nodes)
+        matching_global_labels.extend(_match_group(point_identifiers, grouped_nodes, destructively=False, condition_fcn=_condition_lt))
 
         colour = get_colour(start_node, fields)
         metadata = {'global': {'labels': matching_global_labels, 'colour': colour}}
@@ -279,12 +336,25 @@ def classify_forest(forest, nodes, node_id_map, fields, group_fields):
 
         if is_tree:
             unique_paths = get_unique_list_paths(plant)
-            metadata['indexed'] = {u: _match_group(set(get_identifiers_from_path(u, plant)), grouped_nodes) for u in unique_paths}
+            indexed_metadata = {}
+            for u in unique_paths:
+                path_identifiers = set(get_identifiers_from_path(u, plant))
+                matched_groups = _match_group(path_identifiers, grouped_nodes)
+                matched_groups.extend(_match_group(path_identifiers, grouped_nodes, destructively=False, condition_fcn=_condition_lt))
+                matched_groups = set(matched_groups).difference(set(matching_global_labels))
+                indexed_metadata[u] = list(matched_groups)
+            metadata['indexed'] = indexed_metadata
 
         category = 'contours' if is_contour else 'trees' if is_tree else 'vessels'
         classification[category].append({"points": points, "metadata": metadata})
 
     return classification
+
+
+def _update_node_groups(grouped_nodes):
+    nodes_by_group = {tuple(v): k for k, v in grouped_nodes.items()}
+    group_implied_structure = [set(v) for v in nodes_by_group.keys() if v]
+    return group_implied_structure
 
 
 def read_markers(region, fields):

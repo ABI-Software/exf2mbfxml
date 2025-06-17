@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import xml.etree.ElementTree as ET
+
 from unittest.mock import patch
 
 from exf2mbfxml.analysis import is_suitable_mesh
@@ -88,6 +90,46 @@ class EXFTreeTestCase(unittest.TestCase):
         write_mbfxml(output_xml_file, content)
         self.assertTrue(os.path.isfile(output_xml_file))
 
+        expected_structure = [
+            {'tag': 'contour', 'points': {'x': '668.78', 'y': '-415.46', 'z': '-75.50', 'd': '4.09'}},
+            {'tag': 'contour', 'points': {'x': '645.60', 'y': '-1056.82', 'z': '-88.50', 'd': '4.09'}},
+            {'tag': 'contour', 'points': {'x': '1200.86', 'y': '-972.36', 'z': '-153.50', 'd': '4.09'}},
+            {'tag': 'contour', 'points': {'x': '-7.27', 'y': '-1288.34', 'z': '0.00', 'd': '17.44'}},
+            {'tag': 'contour', 'points': {'x': '1299.23', 'y': '-1287.61', 'z': '-294.00', 'd': '15.99'}},
+            {'tag': 'tree', 'points': {'x': '1101.16', 'y': '-973.74', 'z': '-80.50', 'd': '4.09'},
+             'children':
+                 [{'tag': 'branch', 'points': {'x': '1068.70', 'y': '-979.08', 'z': '-86.12', 'd': '4.09'}}]},
+        ]
+        self._compare_structure(output_xml_file, expected_structure)
+
+    def _compare_structure(self, xml_file, structure):
+        with open(xml_file) as fh:
+            content = fh.read()
+        computed_root = ET.fromstring(content)
+        strip_namespace(computed_root)
+
+        self._compare_children(computed_root, structure)
+
+    def _compare_children(self, computed_root, structure):
+        indexing = {}
+        for index, expected_child in enumerate(structure):
+            expected_child = structure[index]
+            expected_tag = expected_child['tag']
+            if expected_tag in indexing:
+                indexing[expected_tag] += 1
+            else:
+                indexing[expected_tag] = 0
+            children = computed_root.findall(expected_tag)
+            computed_child = children[indexing[expected_tag]]
+            self.assertEqual(expected_child.get('tag'), computed_child.tag)
+            computed_first_point = computed_child.find('point')
+            expected_point = expected_child.get('points')
+            exp_pt_values = [expected_point.get(p) for p in expected_point]
+            com_pt_values = [computed_first_point.attrib.get(k) for k in computed_first_point.attrib]
+            self.assertListEqual(exp_pt_values, com_pt_values)
+            if expected_child.get('children', []):
+                self._compare_children(computed_child, expected_child['children'])
+
     def test_multi_tree_with_branches(self):
         branched_tree_exf_file = _resource_path("tree_with_branches.exf")
         content = read_exf(branched_tree_exf_file)
@@ -162,6 +204,13 @@ class RealWorldTestCase(unittest.TestCase):
         output_xml_file = f"{japanese_exf_file}.xml"
         write_mbfxml(output_xml_file, content)
         self.assertTrue(os.path.isfile(output_xml_file))
+
+
+def strip_namespace(tree):
+    for elem in tree.iter():
+        if '}' in elem.tag:
+            elem.tag = elem.tag.split('}', 1)[1]  # Remove namespace
+    return tree
 
 
 if __name__ == "__main__":

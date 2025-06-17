@@ -6,6 +6,7 @@ from cmlibs.zinc.result import RESULT_OK
 from exf2mbfxml.analysis import determine_forest, classify_forest, read_markers
 from exf2mbfxml.exceptions import EXFFile
 from exf2mbfxml.utilities import determine_fields
+from exf2mbfxml.zinc import get_group_nodes, get_group_elements_and_nodes
 
 
 def read_exf(file_name):
@@ -31,6 +32,7 @@ def extract_mesh_info(region):
     index = 0
     coordinates_field, available_fields, group_fields = determine_fields(field_module)
     data_fields = {available_field.getName(): available_field for available_field in available_fields}
+    grouped_identifiers = get_group_elements_and_nodes(group_fields)
 
     # _print_check_on_field_names(available_fields)
 
@@ -59,9 +61,10 @@ def extract_mesh_info(region):
             element = element_iterator.next()
             index += 1
 
-        forest = determine_forest(analysis_elements)
+        forest, group_start_nodes = determine_forest(analysis_elements, grouped_identifiers)
 
-        mesh_info = classify_forest(forest, nodes, node_identifier_to_index_map, data_fields, group_fields)
+        grouped_nodes = {k: v['nodes'] for k, v in grouped_identifiers.items()}
+        mesh_info = classify_forest(forest, nodes, node_identifier_to_index_map, data_fields, grouped_nodes, group_start_nodes)
 
     mesh_info['markers'] = read_markers(region, data_fields)
     return mesh_info
