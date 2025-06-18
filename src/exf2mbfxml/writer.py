@@ -7,6 +7,19 @@ def _is_trace_association(label):
     return label.startswith('http://') or label.startswith('https://')
 
 
+def _is_set_property(label):
+    SET_TYPES = ['FIL:']
+    for s in SET_TYPES:
+        if label.startswith(s):
+            return True
+
+    return False
+
+
+def _is_type_of_property(label):
+    return _is_set_property(label) or _is_trace_association(label) or is_valid_xml(label)
+
+
 def _write_contour(contour, parent_element):
     points = contour.get("points", [])
     metadata = contour.get("metadata", [])
@@ -105,7 +118,7 @@ def _write_branch(parent_element, tag, attributes, points, path, indexed_labels)
 def _extract_branch_class(labels):
     """Extract the first label that is not a trace association or valid XML."""
     for label in labels:
-        if not _is_trace_association(label) and not is_valid_xml(label):
+        if not _is_type_of_property(label):
             return label
     return None
 
@@ -125,10 +138,11 @@ def _write_tree(tree, parent_element):
 
     attributes = {'color': metadata['global'].get('colour', '#000000')}
     if global_labels:
-        filtered = [s for s in global_labels if not _is_trace_association(s) and not is_valid_xml(s)]
-        for item in filtered:
+        for item in global_labels:
             if item in TREE_TYPES:
                 attributes['type'] = item
+            elif _is_type_of_property(item):
+                indexed_labels[(0,)].append(item)
             else:
                 attributes['rootclass'] = item
 
