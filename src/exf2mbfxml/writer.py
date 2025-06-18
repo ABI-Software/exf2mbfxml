@@ -61,7 +61,7 @@ def _define_properties(parent_element, labels):
     """
     for label in labels:
         tag_name = 'Set'
-        if label.startswith('http://') or label.startswith('https://'):
+        if _is_trace_association(label):
             tag_name = 'TraceAssociation'
         elif is_valid_xml(label):
             tag_name = None
@@ -79,13 +79,35 @@ def _write_point(parent_element, point):
 
 def _write_branch(parent_element, tag, attributes, points, path, indexed_labels):
     branch_element = ET.SubElement(parent_element, tag, attrib=attributes)
-    _define_properties(branch_element, indexed_labels[tuple(path + [0])])
+
+    current_label_path = tuple(path + [0])
+    _define_properties(branch_element, indexed_labels.get(current_label_path, []))
+
     for i, point in enumerate(points):
         current_path = path + [i]
+
         if isinstance(point[0], float):
             _write_point(branch_element, point)
         else:
-            _write_branch(branch_element, "branch", {}, point, current_path, indexed_labels)
+            child_label_path = tuple(current_path + [0])
+            branch_labels = indexed_labels.get(child_label_path, [])
+            branch_class = _extract_branch_class(branch_labels)
+
+            if branch_class:
+                indexed_labels[child_label_path].remove(branch_class)
+                branch_attributes = {'class': branch_class}
+            else:
+                branch_attributes = {}
+
+            _write_branch(branch_element, "branch", branch_attributes, point, current_path, indexed_labels)
+
+
+def _extract_branch_class(labels):
+    """Extract the first label that is not a trace association or valid XML."""
+    for label in labels:
+        if not _is_trace_association(label) and not is_valid_xml(label):
+            return label
+    return None
 
 
 def _write_tree(tree, parent_element):
@@ -103,7 +125,7 @@ def _write_tree(tree, parent_element):
 
     attributes = {'color': metadata['global'].get('colour', '#000000')}
     if global_labels:
-        filtered = [s for s in global_labels if not _is_trace_association(s)]
+        filtered = [s for s in global_labels if not _is_trace_association(s) and not is_valid_xml(s)]
         for item in filtered:
             if item in TREE_TYPES:
                 attributes['type'] = item

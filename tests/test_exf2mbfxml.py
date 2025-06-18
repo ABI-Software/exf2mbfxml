@@ -139,7 +139,7 @@ class EXFTreeTestCase(unittest.TestCase):
         self.assertTrue(os.path.isfile(output_xml_file))
         with open(output_xml_file) as fh:
             content = fh.readlines()
-            line_count = 85
+            line_count = 79
             self.assertEqual(line_count, len(content))
 
 
