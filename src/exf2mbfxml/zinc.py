@@ -70,7 +70,7 @@ def _evaluate_field(node, field, value_type, default_value=None):
 
 
 def get_colour(node, fields):
-    result = _evaluate_field(node, fields.get('rgb'), Field.VALUE_TYPE_REAL, default_value=[0, 0, 0])
+    result = _evaluate_field(node, fields.get('rgb'), Field.VALUE_TYPE_REAL, default_value=[1, 1, 1])
     return rgb_to_hex(result)
 
 

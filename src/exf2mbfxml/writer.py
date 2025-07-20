@@ -3,6 +3,9 @@ from exf2mbfxml import __version__ as package_version
 from exf2mbfxml.utilities import is_valid_xml
 
 
+_DEFAULT_COLOUR = '#FFFFFF'
+
+
 def _is_trace_association(label):
     return label.startswith('http://') or label.startswith('https://')
 
@@ -29,7 +32,7 @@ def _write_contour(contour, parent_element):
     current_metadata = metadata['global']
     top_level = parent_element.tag == 'mbf'
     labels = current_metadata.get('labels', [])
-    attributes = {'colour': current_metadata.get('colour', '#000000'), 'shape': 'Contour'}
+    attributes = {'colour': current_metadata.get('colour', _DEFAULT_COLOUR), 'shape': 'Contour'}
     closed_contour = current_metadata.get('closed', None)
     if closed_contour is not None:
         attributes['closed'] = str(closed_contour).lower()
@@ -136,7 +139,7 @@ def _write_tree(tree, parent_element):
 
     TREE_TYPES = ['Dendrite']
 
-    attributes = {'color': metadata['global'].get('colour', '#000000')}
+    attributes = {'color': metadata['global'].get('colour', _DEFAULT_COLOUR)}
     if global_labels:
         for item in global_labels:
             if item in TREE_TYPES:
@@ -157,7 +160,7 @@ def _write_vessel(vessel, parent_element):
 
     top_level = parent_element.tag == 'mbf'
 
-    attributes = {'color': metadata['global'].get('colour', '#000000'), 'version': '4'}
+    attributes = {'color': metadata['global'].get('colour', _DEFAULT_COLOUR), 'version': '4'}
     global_labels = metadata['global'].get('labels', [])
     if global_labels:
         filtered = [s for s in global_labels if not _is_trace_association(s)]
@@ -204,7 +207,9 @@ def _write_marker(marker, root):
     if not point:
         return
 
-    attributes = {'color': metadata.get('colour', '#000000'), 'name': metadata.get('name', '')}
+    attributes = {'color': metadata.get('colour'), 'name': metadata.get('name')}
+    attributes = {k: v for k, v in attributes.items() if v is not None}
+
     marker_element = ET.SubElement(root, 'marker', attrib=attributes)
     _write_point(marker_element, point)
 
