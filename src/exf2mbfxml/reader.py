@@ -23,12 +23,14 @@ def read_exf(file_name):
 
 
 def extract_mesh_info(region):
-    mesh_info = {}
     field_module = region.getFieldmodule()
     mesh_1d = field_module.findMeshByDimension(1)
     analysis_elements = [None] * mesh_1d.getSize()
     element_iterator = mesh_1d.createElementiterator()
     element = element_iterator.next()
+    if not element.isValid():
+        return None
+
     index = 0
     coordinates_field, available_fields, group_fields = determine_fields(field_module)
     data_fields = {available_field.getName(): available_field for available_field in available_fields}
@@ -36,6 +38,7 @@ def extract_mesh_info(region):
 
     # _print_check_on_field_names(available_fields)
 
+    mesh_info = {}
     # Assumes all elements define the same element field template.
     eft = element.getElementfieldtemplate(coordinates_field, -1)
     local_nodes_count = eft.getNumberOfLocalNodes()

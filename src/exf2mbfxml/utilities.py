@@ -199,7 +199,8 @@ def find_available_fields(field_module):
 
 def determine_fields(field_module):
     coordinates_field = find_likely_coordinate_field(field_module)
-    coordinates_field.setName("coordinates")
     available_fields, group_fields = find_available_fields(field_module)
-    available_fields.insert(0, coordinates_field)
+    if coordinates_field is not None:
+        coordinates_field.setName("coordinates")
+        available_fields.insert(0, coordinates_field)
     return coordinates_field, available_fields, group_fields
