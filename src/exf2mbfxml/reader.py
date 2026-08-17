@@ -114,10 +114,12 @@ def extract_mesh_info(region):
 
                 mesh_cache.setFieldReal(coordinates_field, item['coordinates'])
                 search_element, xi = find_mesh_location.evaluateMeshLocation(mesh_cache, 1)
-                # print('answer:', search_element.getIdentifier(), element.getIdentifier(), xi)
+                mesh_cache.setMeshLocation(search_element, xi)
+                _, start_coordinates = coordinates_field.evaluateReal(mesh_cache, 3)
                 item['branch_location'] = xi
                 mesh_group.removeElement(element)
-                branches.setdefault(branch_element, []).append((xi, item['coordinates'], item['end_node'], item['id']))
+
+                branches.setdefault(branch_element, []).append((xi, start_coordinates, item['end_node'], item['id']))
                 replaced_elements[item['id']] = set()
 
     # Replace virtual nodes with physical nodes and adjust the element into line segments
